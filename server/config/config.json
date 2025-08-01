@@ -1,0 +1,20 @@
+{
+  "development": {
+    "username": "root",
+    "password": "Jeeva@9949",
+    "database": "freshontime_db",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": "Jeeva@9949",
+    "database": "freshontime_db_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "use_env_variable": "DATABASE_URL",
+    "dialect": "mysql"
+  }
+}
