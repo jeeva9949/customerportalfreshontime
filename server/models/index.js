@@ -1,11 +1,14 @@
+// ====================================================
+// --- File: server/models/index.js ---
+// ====================================================
+// This file correctly loads the database configuration and all models.
+
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
-const process = require('process');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
-// IMPORTANT: You will need to create a 'config' folder with a 'config.json' file for DB credentials
 const config = require(__dirname + '/../config/config.json')[env]; 
 const db = {};
 

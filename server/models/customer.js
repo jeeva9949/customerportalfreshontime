@@ -1,9 +1,9 @@
-/*
- * server/models/customer.js (UPDATED)
- * This model no longer has any association with Plans.
- */
+// ====================================================
+// --- File: server/models/customer.js ---
+// ====================================================
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Customer extends Model {
     static associate(models) {
@@ -12,8 +12,12 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Customer.init({
-    name: DataTypes.STRING, address: DataTypes.TEXT, mobile: DataTypes.STRING,
-    email: DataTypes.STRING, first_purchase_date: DataTypes.DATE
+    name: DataTypes.STRING, 
+    address: DataTypes.TEXT, 
+    mobile: DataTypes.STRING,
+    email: DataTypes.STRING, 
+    first_purchase_date: DataTypes.DATE
   }, { sequelize, modelName: 'Customer', tableName: 'customers' });
   return Customer;
 };
+

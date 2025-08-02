@@ -1,11 +1,14 @@
-/*
- * server/routes/paymentRoutes.js (UPDATED)
- */
+// ====================================================
+// --- File: server/routes/paymentRoutes.js ---
+// ====================================================
 const express = require('express');
-const paymentRouter = express.Router();
+const router = express.Router();
 const paymentController = require('../controllers/paymentController');
-paymentRouter.get('/', paymentController.getAllPayments);
-paymentRouter.post('/', paymentController.createPayment);
-paymentRouter.put('/:id', paymentController.updatePayment); // Added
-paymentRouter.delete('/:id', paymentController.deletePayment); // Added
-module.exports = paymentRouter;
+const authMiddleware = require('../middleware/authMiddleware');
+
+router.get('/', authMiddleware, paymentController.getAllPayments);
+router.post('/', authMiddleware, paymentController.createPayment);
+router.put('/:id', authMiddleware, paymentController.updatePayment);
+router.delete('/:id', authMiddleware, paymentController.deletePayment);
+
+module.exports = router;

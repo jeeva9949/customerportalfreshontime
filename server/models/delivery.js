@@ -1,9 +1,9 @@
-/*
- * server/models/delivery.js (UPDATED)
- * This model now correctly associates with the Agent model.
- */
+// ====================================================
+// --- File: server/models/delivery.js ---
+// ====================================================
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Delivery extends Model {
     static associate(models) {

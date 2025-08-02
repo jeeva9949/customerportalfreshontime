@@ -1,11 +1,14 @@
-/*
- * server/routes/customerRoutes.js
- */
-const customerExpress = require('express'); // FIX: require express
-const customerRouter = customerExpress.Router();
+// ====================================================
+// --- File: server/routes/customerRoutes.js ---
+// ====================================================
+const express = require('express');
+const router = express.Router();
 const customerController = require('../controllers/customerController');
-customerRouter.get('/', customerController.getAllCustomers);
-customerRouter.post('/', customerController.createCustomer);
-customerRouter.put('/:id', customerController.updateCustomer);
-customerRouter.delete('/:id', customerController.deleteCustomer);
-module.exports = customerRouter;
+const authMiddleware = require('../middleware/authMiddleware');
+
+router.get('/', authMiddleware, customerController.getAllCustomers);
+router.post('/', authMiddleware, customerController.createCustomer);
+router.put('/:id', authMiddleware, customerController.updateCustomer);
+router.delete('/:id', authMiddleware, customerController.deleteCustomer);
+
+module.exports = router;

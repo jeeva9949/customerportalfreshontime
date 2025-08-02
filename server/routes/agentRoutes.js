@@ -1,16 +1,15 @@
-/*
- * server/routes/agentRoutes.js (UPDATED)
- */
+// ----------------------------------------------------
+// --- File: server/routes/agentRoutes.js ---
+// ----------------------------------------------------
 const express = require('express');
-const agentRouter = express.Router();
+const router = express.Router();
 const agentController = require('../controllers/agentController');
-agentRouter.post('/login', agentController.login); // Added login route
-agentRouter.get('/', agentController.getAllAgents);
-agentRouter.post('/', agentController.createAgent);
-agentRouter.put('/:id', agentController.updateAgent);
-agentRouter.delete('/:id', agentController.deleteAgent);
-module.exports = agentRouter;
+const authMiddleware = require('../middleware/authMiddleware');
 
-/*
- * All other backend files (controllers, routes, models, server.js) are correct as they were in the last complete version.
- */
+router.post('/login', agentController.login);
+router.get('/', authMiddleware, agentController.getAllAgents);
+router.post('/', authMiddleware, agentController.createAgent);
+router.put('/:id', authMiddleware, agentController.updateAgent);
+router.delete('/:id', authMiddleware, agentController.deleteAgent);
+
+module.exports = router;

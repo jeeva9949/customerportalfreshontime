@@ -1,8 +1,9 @@
-/*
- * server/models/payment.js
- */
+// ====================================================
+// --- File: server/models/payment.js ---
+// ====================================================
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Payment extends Model {
     static associate(models) { Payment.belongsTo(models.Customer, { foreignKey: 'customer_id', as: 'customer' }); }
