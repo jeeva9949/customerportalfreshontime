@@ -4,6 +4,8 @@
 // This version includes the full password reset functionality.
 
 const express = require('express');
+
+require('dotenv').config(); // This line loads the .env file
 const cors = require('cors');
 const cron = require('node-cron');
 const db = require('./models'); 

@@ -1,16 +1,11 @@
-// ====================================================
-// --- File: server/controllers/notificationController.js (CORRECTED for WhatsApp) ---
-// ====================================================
-// This file now uses your credentials to send templated WhatsApp messages.
+// File: server/controllers/notificationController.js
 
 const twilio = require('twilio');
 
-// Your actual Twilio credentials
-const accountSid = 'AC4ed6bce010f72088260f7cc8ff21fc24';
-const authToken = '7f3089214c0bdb520a1652e45ec2f6de';
-
-// Your Twilio WhatsApp Sandbox Number
-const twilioPhoneNumber = 'whatsapp:+14155238886';
+// Securely read credentials from environment variables
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
 
 // The Content SID for your pre-approved WhatsApp template
 const contentSid = 'HXb5b62575e6e4ff6129ad7c8efe1f983e';
