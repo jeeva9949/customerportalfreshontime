@@ -1,8 +1,6 @@
 // ====================================================
-// --- File: server/routes/index.js (Master Router) ---
+// --- File: server/routes/index.js (UPDATED) ---
 // ====================================================
-// This file imports all individual route files and combines them.
-
 const express = require('express');
 const masterRouter = express.Router();
 
@@ -13,6 +11,7 @@ const customerRoutes = require('./customerRoutes');
 const deliveryRoutes = require('./deliveryRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const supportRoutes = require('./supportRoutes');
+const passwordRoutes = require('./passwordRoutes'); // New
 
 // Use the routers with their base paths
 masterRouter.use('/auth', authRoutes);
@@ -21,6 +20,6 @@ masterRouter.use('/customers', customerRoutes);
 masterRouter.use('/deliveries', deliveryRoutes);
 masterRouter.use('/payments', paymentRoutes);
 masterRouter.use('/support', supportRoutes);
+masterRouter.use('/password-requests', passwordRoutes); // New
 
 module.exports = masterRouter;
-

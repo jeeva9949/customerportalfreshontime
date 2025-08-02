@@ -1,11 +1,11 @@
 // ====================================================
 // --- File: server/server.js (Main Entry Point) ---
 // ====================================================
-// This version includes an automated daily reset of deliveries.
+// This version includes the full password reset functionality.
 
 const express = require('express');
 const cors = require('cors');
-const cron = require('node-cron'); // Import the cron library
+const cron = require('node-cron');
 const db = require('./models'); 
 const routes = require('./routes'); 
 
@@ -25,14 +25,13 @@ app.get('/', (req, res) => {
 });
 
 // --- Automated Daily Task ---
-// This schedule runs every day at midnight ('0 0 * * *').
 cron.schedule('0 0 * * *', async () => {
     console.log('Running daily task: Resetting delivered items for the new day...');
     try {
         const [updatedCount] = await db.Delivery.update(
             { 
                 status: 'Pending',
-                delivery_date: new Date() // Set delivery date to the new day
+                delivery_date: new Date()
             },
             { 
                 where: { 
@@ -46,7 +45,7 @@ cron.schedule('0 0 * * *', async () => {
     }
 }, {
     scheduled: true,
-    timezone: "Asia/Kolkata" // Set to your local timezone
+    timezone: "Asia/Kolkata"
 });
 
 

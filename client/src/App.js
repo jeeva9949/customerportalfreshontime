@@ -120,7 +120,7 @@ function AuthPage({ onLogin, onRegister }) {
 }
 
 // --- Admin Dashboard Component ---
-function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket }) {
+function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, passwordRequests, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket, onApprovePassword }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState('');
@@ -181,6 +181,10 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         const agentName = t.agent?.name || '';
         return agentName.toLowerCase().includes(searchTerm.toLowerCase());
     }), [supportTickets, searchTerm]);
+    const filteredPasswordRequests = useMemo(() => passwordRequests.filter(r => {
+        const agentName = r.agent?.name || '';
+        return agentName.toLowerCase().includes(searchTerm.toLowerCase());
+    }), [passwordRequests, searchTerm]);
   
     const renderModalContent = () => {
         if (!isModalOpen) return null;
@@ -250,6 +254,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
             <TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
             <TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
             <TabButton label="Support" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} />
+            <TabButton label="Password Requests" isActive={activeTab === 'password_requests'} onClick={() => setActiveTab('password_requests')} />
         </div>
         <div className="bg-white shadow-md rounded-lg p-4 md:p-6">
             <div className="overflow-x-auto">
@@ -282,6 +287,11 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
                     <table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Issue Type</th><th className="text-left p-2">Details</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th><th className="text-left p-2">Actions</th></tr></thead>
                     <tbody>{filteredSupportTickets.map(t => (<tr key={t.id} className="border-b"><td className="p-2">{t.agent?.name}</td><td className="p-2">{t.issueType}</td><td className="p-2">{t.details}</td><td className="p-2"><StatusPill status={t.status} /></td><td className="p-2">{new Date(t.createdAt).toLocaleString()}</td><td className="p-2">{t.status === 'Open' && <button onClick={() => onResolveTicket(t.id)} className="text-green-600 hover:underline">Resolve</button>}</td></tr>))}</tbody></table></>
                 )}
+                {activeTab === 'password_requests' && (
+                    <><SearchBar onSearch={setSearchTerm} placeholder="Search by agent name..." />
+                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th><th className="text-left p-2">Actions</th></tr></thead>
+                    <tbody>{filteredPasswordRequests.map(r => (<tr key={r.id} className="border-b"><td className="p-2">{r.agent?.name}</td><td className="p-2"><StatusPill status={r.status} /></td><td className="p-2">{new Date(r.createdAt).toLocaleString()}</td><td className="p-2">{r.status === 'Pending' && <button onClick={() => onApprovePassword(r.id)} className="text-green-600 hover:underline">Approve</button>}</td></tr>))}</tbody></table></>
+                )}
             </div>
         </div>
       </div>
@@ -289,7 +299,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
 }
 
 // --- Agent Portal Component ---
-function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDelivery, onReportIssue }) {
+function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDelivery, onReportIssue, onRequestPasswordChange }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDelivery, setSelectedDelivery] = useState(null);
@@ -297,6 +307,12 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [issueType, setIssueType] = useState('Incorrect Address');
     const [issueDetails, setIssueDetails] = useState('');
+
+    const agentDetails = useMemo(() => {
+        const fullDetails = allCustomers.find(c => c.id === agent.id);
+        return { ...agent, ...fullDetails };
+    }, [agent, allCustomers]);
+
 
     const agentDeliveries = useMemo(() => allDeliveries.filter(d => d.agent_id === agent.id), [allDeliveries, agent.id]);
 
@@ -338,6 +354,18 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
         alert('Support ticket submitted successfully!');
     };
     
+    const handleSaveChanges = () => {
+        if (newPassword) {
+            if (newPassword.length < 6) {
+                alert("Password must be at least 6 characters long.");
+                return;
+            }
+            onRequestPasswordChange(newPassword);
+            setNewPassword('');
+            alert('Password change requested. An admin will approve it shortly.');
+        }
+    };
+
     const BottomNavLink = ({ page, label, icon }) => (
         <button onClick={() => setActiveTab(page)} className={`flex flex-col items-center justify-center w-full transition-colors py-1 ${activeTab === page ? 'text-orange-400' : 'text-gray-400 hover:text-orange-400'}`}>
             <span className="text-2xl">{icon}</span>
@@ -395,12 +423,12 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
                         <div className="bg-slate-800 p-6 rounded-2xl shadow-md max-w-2xl mx-auto">
                             <div className="flex items-center space-x-4 mb-6">
                                 <div className="w-16 h-16 rounded-full bg-orange-500 text-white flex items-center justify-center text-3xl font-bold">
-                                    {agent.name.charAt(0)}
+                                    {agent.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-white">{agent.name}</h3>
                                     <p className="text-gray-400">{agent.email}</p>
-                                    <p className="text-gray-400">{agent.mobile || '+1 (555) 123-4567'}</p>
+                                    <p className="text-gray-400">{agentDetails.mobile || '+1 (555) 123-4567'}</p>
                                 </div>
                             </div>
                             
@@ -428,7 +456,7 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
                                         <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-focus:ring-4 peer-focus:ring-orange-500/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
                                     </label>
                                 </div>
-                                <button className="w-full bg-slate-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 transition-colors">Save Changes</button>
+                                <button onClick={handleSaveChanges} className="w-full bg-slate-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 transition-colors">Save Changes</button>
                             </div>
                         </div>
                     </div>
@@ -568,6 +596,7 @@ export default function App() {
     const [deliveries, setDeliveries] = useState([]);
     const [payments, setPayments] = useState([]);
     const [supportTickets, setSupportTickets] = useState([]);
+    const [passwordRequests, setPasswordRequests] = useState([]);
 
     const [confirmState, setConfirmState] = useState({ isOpen: false });
 
@@ -583,14 +612,15 @@ export default function App() {
         if (!currentToken) return;
         try {
             const authHeader = { 'Authorization': `Bearer ${currentToken}` };
-            const [customersRes, agentsRes, deliveriesRes, paymentsRes, supportRes] = await Promise.all([
+            const [customersRes, agentsRes, deliveriesRes, paymentsRes, supportRes, passwordRes] = await Promise.all([
                 fetch(`${API_URL}/customers`, { headers: authHeader }),
                 fetch(`${API_URL}/agents`, { headers: authHeader }),
                 fetch(`${API_URL}/deliveries`, { headers: authHeader }),
                 fetch(`${API_URL}/payments`, { headers: authHeader }),
-                fetch(`${API_URL}/support`, { headers: authHeader })
+                fetch(`${API_URL}/support`, { headers: authHeader }),
+                fetch(`${API_URL}/password-requests`, { headers: authHeader })
             ]);
-            if (!customersRes.ok || !agentsRes.ok || !deliveriesRes.ok || !paymentsRes.ok || !supportRes.ok) {
+            if (!customersRes.ok || !agentsRes.ok || !deliveriesRes.ok || !paymentsRes.ok || !supportRes.ok || !passwordRes.ok) {
                 throw new Error("Failed to fetch initial data. Your session may have expired.");
             }
             setCustomers(await customersRes.json());
@@ -598,6 +628,7 @@ export default function App() {
             setDeliveries(await deliveriesRes.json());
             setPayments(await paymentsRes.json());
             setSupportTickets(await supportRes.json());
+            setPasswordRequests(await passwordRes.json());
         } catch (error) {
             console.error("Fetch data error:", error);
             handleLogout();
@@ -706,13 +737,15 @@ export default function App() {
     
     const handleReportIssue = (issue) => apiRequest('/support', 'POST', issue);
     const handleResolveTicket = (ticketId) => apiRequest(`/support/${ticketId}`, 'PUT', { status: 'Resolved' });
+    const handleRequestPasswordChange = (newPassword) => apiRequest('/password-requests', 'POST', { newPassword });
+    const handleApprovePassword = (requestId) => apiRequest(`/password-requests/${requestId}/approve`, 'PUT');
 
     const renderPage = () => {
         switch (page) {
             case 'admin_dashboard':
-                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} onResolveTicket={handleResolveTicket} />;
+                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} passwordRequests={passwordRequests} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} onResolveTicket={handleResolveTicket} onApprovePassword={handleApprovePassword} />;
             case 'agent_portal':
-                return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} />;
+                return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allCustomers={agents} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} onRequestPasswordChange={handleRequestPasswordChange} />;
             case 'auth':
             default:
                 return <AuthPage onLogin={handleLogin} onRegister={handleRegister} />;
