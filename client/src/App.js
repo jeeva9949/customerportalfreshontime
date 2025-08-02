@@ -14,6 +14,8 @@ const StatusPill = ({ status }) => {
         Delivered: 'bg-green-500/20 text-green-400',
         Failed: 'bg-red-500/20 text-red-400',
         Cancelled: 'bg-red-500/20 text-red-400',
+        Open: 'bg-blue-400/20 text-blue-300',
+        Closed: 'bg-gray-400/20 text-gray-300',
         Paid: 'bg-green-100 text-green-800',
         Unpaid: 'bg-red-100 text-red-800',
         Due: 'bg-yellow-100 text-yellow-800'
@@ -117,7 +119,7 @@ function AuthPage({ onLogin, onRegister }) {
 }
 
 // --- Admin Dashboard Component ---
-function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onStartNewDay, onAddPayment, onUpdatePayment, onDeletePayment }) {
+function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onStartNewDay, onAddPayment, onUpdatePayment, onDeletePayment }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState('');
@@ -174,6 +176,10 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
         const customerName = p.customer?.name || '';
         return customerName.toLowerCase().includes(searchTerm.toLowerCase());
     }), [payments, searchTerm]);
+    const filteredSupportTickets = useMemo(() => supportTickets.filter(t => {
+        const agentName = t.agent?.name || '';
+        return agentName.toLowerCase().includes(searchTerm.toLowerCase());
+    }), [supportTickets, searchTerm]);
   
     const renderModalContent = () => {
         if (!isModalOpen) return null;
@@ -238,7 +244,13 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
                 <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Logout</button>
             </div>
         </div>
-        <div className="flex gap-2 mb-6 flex-wrap"><TabButton label="Deliveries" isActive={activeTab === 'deliveries'} onClick={() => setActiveTab('deliveries')} /><TabButton label="Customers" isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} /><TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} /><TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} /></div>
+        <div className="flex gap-2 mb-6 flex-wrap">
+            <TabButton label="Deliveries" isActive={activeTab === 'deliveries'} onClick={() => setActiveTab('deliveries')} />
+            <TabButton label="Customers" isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
+            <TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
+            <TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
+            <TabButton label="Support" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} />
+        </div>
         <div className="bg-white shadow-md rounded-lg p-4 md:p-6">
             <div className="overflow-x-auto">
                 {activeTab === 'deliveries' && (
@@ -265,6 +277,11 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
                     <table className="min-w-full"><thead><tr><th className="text-left p-2">Customer</th><th className="text-left p-2">Amount</th><th className="text-left p-2">Status</th><th className="text-left p-2">Due Date</th><th className="text-left p-2">Actions</th></tr></thead>
                     <tbody>{filteredPayments.map(p => (<tr key={p.id} className="border-b"><td className="p-2">{p.customer?.name}</td><td className="p-2">${p.amount}</td><td className="p-2"><StatusPill status={p.status} /></td><td className="p-2">{new Date(p.due_date).toLocaleDateString()}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeletePayment(p.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>
                 )}
+                 {activeTab === 'support' && (
+                    <><SearchBar onSearch={setSearchTerm} placeholder="Search by agent name..." />
+                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Issue Type</th><th className="text-left p-2">Details</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th></tr></thead>
+                    <tbody>{filteredSupportTickets.map(t => (<tr key={t.id} className="border-b"><td className="p-2">{t.agent?.name}</td><td className="p-2">{t.issueType}</td><td className="p-2">{t.details}</td><td className="p-2"><StatusPill status={t.status} /></td><td className="p-2">{new Date(t.createdAt).toLocaleString()}</td></tr>))}</tbody></table></>
+                )}
             </div>
         </div>
       </div>
@@ -272,12 +289,14 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
 }
 
 // --- Agent Portal Component ---
-function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDelivery }) {
+function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDelivery, onReportIssue }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDelivery, setSelectedDelivery] = useState(null);
     const [newPassword, setNewPassword] = useState('');
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [issueType, setIssueType] = useState('Incorrect Address');
+    const [issueDetails, setIssueDetails] = useState('');
 
     const agentDeliveries = useMemo(() => allDeliveries.filter(d => d.agent_id === agent.id), [allDeliveries, agent.id]);
 
@@ -311,6 +330,13 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
         }
         setIsModalOpen(false);
     };
+
+    const handleReportSubmit = (e) => {
+        e.preventDefault();
+        onReportIssue({ issueType, details: issueDetails });
+        setIssueDetails('');
+        alert('Support ticket submitted successfully!');
+    };
     
     const BottomNavLink = ({ page, label, icon }) => (
         <button onClick={() => setActiveTab(page)} className={`flex flex-col items-center justify-center w-full transition-colors py-1 ${activeTab === page ? 'text-orange-400' : 'text-gray-400 hover:text-orange-400'}`}>
@@ -323,6 +349,7 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
         let title = 'Deliveries';
         if (activeTab === 'history') title = 'History';
         if (activeTab === 'profile') title = 'Profile';
+        if (activeTab === 'support') title = 'Support';
 
         return (
              <header className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-4">
@@ -340,8 +367,8 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
         switch(activeTab) {
             case 'history':
                 return (
-                    <div className="space-y-2">
-                        <h2 className="text-xl font-bold text-gray-200 px-4 pt-4">Delivery History</h2>
+                    <div className="p-4 space-y-2">
+                        <h2 className="text-xl font-bold text-gray-200">Delivery History</h2>
                         {historyDeliveries.length > 0 ? historyDeliveries.map(delivery => {
                             const customer = allCustomers.find(c => c.id === delivery.customer_id);
                             return (
@@ -402,6 +429,39 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
                                     </label>
                                 </div>
                                 <button className="w-full bg-slate-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 transition-colors">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'support':
+                return (
+                    <div className="p-4">
+                        <h2 className="text-xl font-bold text-gray-200 mb-4">Support</h2>
+                        <div className="bg-slate-800 p-6 rounded-2xl shadow-md max-w-2xl mx-auto space-y-8">
+                            <div>
+                                <h3 className="text-lg font-semibold text-white mb-3">Contact Admin</h3>
+                                <div className="flex gap-4">
+                                    <button className="flex-1 flex items-center justify-center gap-2 border border-slate-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-700 transition-colors">
+                                        <span>📞</span> Call Support
+                                    </button>
+                                    <button className="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                                        <span>💬</span> Chat with Admin
+                                    </button>
+                                </div>
+                            </div>
+                             <div>
+                                <h3 className="text-lg font-semibold text-white mb-3">Report an Issue</h3>
+                                <form onSubmit={handleReportSubmit} className="space-y-4">
+                                    <select value={issueType} onChange={e => setIssueType(e.target.value)} className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                        <option>Incorrect Address</option>
+                                        <option>Customer Not Available</option>
+                                        <option>Package Damaged</option>
+                                        <option>Vehicle Issue</option>
+                                        <option>Other</option>
+                                    </select>
+                                    <textarea value={issueDetails} onChange={e => setIssueDetails(e.target.value)} rows="4" className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-orange-500" placeholder="Provide more details..."></textarea>
+                                    <button type="submit" className="w-full bg-orange-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-orange-600 transition-colors">Submit Report</button>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -490,6 +550,7 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
                 <BottomNavLink page="deliveries" label="Deliveries" icon="📦" />
                 <BottomNavLink page="history" label="History" icon="🕒" />
                 <BottomNavLink page="profile" label="Profile" icon="👤" />
+                <BottomNavLink page="support" label="Support" icon="💡" />
             </nav>
         </div>
     );
@@ -506,6 +567,7 @@ export default function App() {
     const [agents, setAgents] = useState([]);
     const [deliveries, setDeliveries] = useState([]);
     const [payments, setPayments] = useState([]);
+    const [supportTickets, setSupportTickets] = useState([]);
 
     const [confirmState, setConfirmState] = useState({ isOpen: false });
 
@@ -521,19 +583,21 @@ export default function App() {
         if (!currentToken) return;
         try {
             const authHeader = { 'Authorization': `Bearer ${currentToken}` };
-            const [customersRes, agentsRes, deliveriesRes, paymentsRes] = await Promise.all([
+            const [customersRes, agentsRes, deliveriesRes, paymentsRes, supportRes] = await Promise.all([
                 fetch(`${API_URL}/customers`, { headers: authHeader }),
                 fetch(`${API_URL}/agents`, { headers: authHeader }),
                 fetch(`${API_URL}/deliveries`, { headers: authHeader }),
-                fetch(`${API_URL}/payments`, { headers: authHeader })
+                fetch(`${API_URL}/payments`, { headers: authHeader }),
+                fetch(`${API_URL}/support`, { headers: authHeader })
             ]);
-            if (!customersRes.ok || !agentsRes.ok || !deliveriesRes.ok || !paymentsRes.ok) {
+            if (!customersRes.ok || !agentsRes.ok || !deliveriesRes.ok || !paymentsRes.ok || !supportRes.ok) {
                 throw new Error("Failed to fetch initial data. Your session may have expired.");
             }
             setCustomers(await customersRes.json());
             setAgents(await agentsRes.json());
             setDeliveries(await deliveriesRes.json());
             setPayments(await paymentsRes.json());
+            setSupportTickets(await supportRes.json());
         } catch (error) {
             console.error("Fetch data error:", error);
             handleLogout();
@@ -639,6 +703,8 @@ export default function App() {
     const handleAddPayment = (payment) => apiRequest('/payments', 'POST', payment);
     const handleUpdatePayment = (payment) => apiRequest(`/payments/${payment.id}`, 'PUT', payment);
     const handleDeletePayment = (id) => requestConfirmation('Delete Payment?', 'Are you sure you want to delete this payment record?', () => apiRequest(`/payments/${id}`, 'DELETE'));
+    
+    const handleReportIssue = (issue) => apiRequest('/support', 'POST', issue);
 
     const handleStartNewDay = () => {
         requestConfirmation(
@@ -657,9 +723,9 @@ export default function App() {
     const renderPage = () => {
         switch (page) {
             case 'admin_dashboard':
-                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onStartNewDay={handleStartNewDay} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} />;
+                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onStartNewDay={handleStartNewDay} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} />;
             case 'agent_portal':
-                return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} />;
+                return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} />;
             case 'auth':
             default:
                 return <AuthPage onLogin={handleLogin} onRegister={handleRegister} />;
