@@ -1,47 +1,17 @@
 /*
- * server/models/agent.js (NEW FILE)
- * This is the model for your new, separate 'agents' table.
+ * server/models/agent.js (UPDATED)
  */
 'use strict';
 const { Model } = require('sequelize');
-
+const bcrypt = require('bcryptjs');
 module.exports = (sequelize, DataTypes) => {
   class Agent extends Model {
-    static associate(models) {
-      // An Agent can be assigned to many Deliveries
-      // Note: This assumes you will add an 'agent_id' to your Delivery model
-      // and link it here. For now, we keep it simple.
-    }
+    validPassword(password) { return bcrypt.compareSync(password, this.password); }
+    static associate(models) { Agent.hasMany(models.Delivery, { foreignKey: 'agent_id' }); }
   }
   Agent.init({
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: true
-      }
-    },
-    mobile: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    join_date: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
-    },
-    bank_details: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    }
-  }, {
-    sequelize,
-    modelName: 'Agent',
-    tableName: 'agents',
-  });
+    name: DataTypes.STRING, email: DataTypes.STRING, password: DataTypes.STRING,
+    mobile: DataTypes.STRING, join_date: DataTypes.DATE, bank_details: DataTypes.TEXT
+  }, { sequelize, modelName: 'Agent', tableName: 'agents', hooks: { beforeCreate: (agent) => { if (agent.password) { agent.password = bcrypt.hashSync(agent.password, 10); } } } });
   return Agent;
 };

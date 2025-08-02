@@ -32,9 +32,11 @@ const SearchBar = ({ onSearch, placeholder }) => (
 // --- Auth Pages ---
 function AuthPage({ onLogin, onRegister }) {
     const [isLogin, setIsLogin] = useState(true);
+    const [userType, setUserType] = useState('agent');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
+    const [adminCode, setAdminCode] = useState('');
     const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
@@ -42,12 +44,12 @@ function AuthPage({ onLogin, onRegister }) {
         setError('');
         try {
             if (isLogin) {
-                await onLogin(email, password);
+                await onLogin(email, password, userType);
             } else {
                 if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-                await onRegister(name, email, password);
+                await onRegister(name, email, password, adminCode);
                 setIsLogin(true);
-                alert('Registration successful! Please log in.');
+                alert('Admin Registration successful! Please log in.');
             }
         } catch (err) {
             setError(err.message);
@@ -57,9 +59,14 @@ function AuthPage({ onLogin, onRegister }) {
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
             <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-                <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">{isLogin ? 'Login' : 'Admin Registration'}</h2>
+                <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">{isLogin ? `${userType.charAt(0).toUpperCase() + userType.slice(1)} Login` : 'Admin Registration'}</h2>
                 <form onSubmit={handleSubmit}>
-                    {!isLogin && <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" className="p-2 border rounded w-full mb-4" required />}
+                    {!isLogin && (
+                        <>
+                            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" className="p-2 border rounded w-full mb-4" required />
+                            <input type="text" value={adminCode} onChange={(e) => setAdminCode(e.target.value)} placeholder="Admin Registration Code" className="p-2 border rounded w-full mb-4" required />
+                        </>
+                    )}
                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="p-2 border rounded w-full mb-4" required />
                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="p-2 border rounded w-full mb-4" required />
                     {error && <p className="text-red-500 text-xs mb-4">{error}</p>}
@@ -67,9 +74,16 @@ function AuthPage({ onLogin, onRegister }) {
                 </form>
             </div>
             <div className="text-center mt-4">
-                <button onClick={() => { setIsLogin(!isLogin); setError(''); }} className="text-blue-600 hover:underline">
-                    {isLogin ? "Need an account? Register" : "Already have an account? Login"}
+                <button onClick={() => { setIsLogin(!isLogin); setError(''); if(!isLogin) setUserType('admin'); }} className="text-blue-600 hover:underline">
+                    {isLogin ? "Need an admin account? Register" : "Already have an account? Login"}
                 </button>
+                {isLogin && (
+                    <div className="mt-2">
+                        <button onClick={() => setUserType(userType === 'admin' ? 'agent' : 'admin')} className="text-sm text-gray-600 hover:underline">
+                            Switch to {userType === 'admin' ? 'Agent' : 'Admin'} Login
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -95,7 +109,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
         else {
             const defaultState = {
                 addCustomer: { name: '', address: '', mobile: '', email: '', first_purchase_date: new Date().toISOString().split('T')[0] },
-                addAgent: { name: '', mobile: '', email: '', password: '', join_date: new Date().toISOString().split('T')[0], salary_status: 'Unpaid', bank_details: '' },
+                addAgent: { name: '', mobile: '', email: '', password: '', join_date: new Date().toISOString().split('T')[0], bank_details: '' },
                 createDelivery: { customerId: '', agentId: '', item: 'Tropical Fruit Bowl', delivery_date: new Date().toISOString().split('T')[0] },
                 addPayment: { customer_id: '', amount: '', status: 'Due', due_date: new Date().toISOString().split('T')[0] }
             };
@@ -357,16 +371,17 @@ export default function App() {
       return response;
   };
 
-  const handleRegister = async (name, email, password) => {
+  const handleRegister = async (name, email, password, adminCode) => {
     const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role: 'Admin' })
+        body: JSON.stringify({ name, email, password, adminCode, role: 'Admin' })
     });
     await handleApiError(res);
   };
 
-  const handleLogin = async (email, password) => {
-    const res = await fetch(`${API_URL}/auth/login`, {
+  const handleLogin = async (email, password, userType) => {
+    const loginUrl = userType === 'admin' ? `${API_URL}/auth/login` : `${API_URL}/agents/login`;
+    const res = await fetch(loginUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
     });
