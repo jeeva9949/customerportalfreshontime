@@ -16,6 +16,7 @@ const StatusPill = ({ status }) => {
         Cancelled: 'bg-red-500/20 text-red-400',
         Open: 'bg-blue-400/20 text-blue-300',
         Closed: 'bg-gray-400/20 text-gray-300',
+        Resolved: 'bg-green-500/20 text-green-400', // Added Resolved status
         Paid: 'bg-green-100 text-green-800',
         Unpaid: 'bg-red-100 text-red-800',
         Due: 'bg-yellow-100 text-yellow-800'
@@ -119,7 +120,7 @@ function AuthPage({ onLogin, onRegister }) {
 }
 
 // --- Admin Dashboard Component ---
-function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onStartNewDay, onAddPayment, onUpdatePayment, onDeletePayment }) {
+function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onStartNewDay, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState('');
@@ -279,8 +280,8 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
                 )}
                  {activeTab === 'support' && (
                     <><SearchBar onSearch={setSearchTerm} placeholder="Search by agent name..." />
-                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Issue Type</th><th className="text-left p-2">Details</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th></tr></thead>
-                    <tbody>{filteredSupportTickets.map(t => (<tr key={t.id} className="border-b"><td className="p-2">{t.agent?.name}</td><td className="p-2">{t.issueType}</td><td className="p-2">{t.details}</td><td className="p-2"><StatusPill status={t.status} /></td><td className="p-2">{new Date(t.createdAt).toLocaleString()}</td></tr>))}</tbody></table></>
+                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Issue Type</th><th className="text-left p-2">Details</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th><th className="text-left p-2">Actions</th></tr></thead>
+                    <tbody>{filteredSupportTickets.map(t => (<tr key={t.id} className="border-b"><td className="p-2">{t.agent?.name}</td><td className="p-2">{t.issueType}</td><td className="p-2">{t.details}</td><td className="p-2"><StatusPill status={t.status} /></td><td className="p-2">{new Date(t.createdAt).toLocaleString()}</td><td className="p-2">{t.status === 'Open' && <button onClick={() => onResolveTicket(t.id)} className="text-green-600 hover:underline">Resolve</button>}</td></tr>))}</tbody></table></>
                 )}
             </div>
         </div>
@@ -705,6 +706,7 @@ export default function App() {
     const handleDeletePayment = (id) => requestConfirmation('Delete Payment?', 'Are you sure you want to delete this payment record?', () => apiRequest(`/payments/${id}`, 'DELETE'));
     
     const handleReportIssue = (issue) => apiRequest('/support', 'POST', issue);
+    const handleResolveTicket = (ticketId) => apiRequest(`/support/${ticketId}`, 'PUT', { status: 'Resolved' });
 
     const handleStartNewDay = () => {
         requestConfirmation(
@@ -723,7 +725,7 @@ export default function App() {
     const renderPage = () => {
         switch (page) {
             case 'admin_dashboard':
-                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onStartNewDay={handleStartNewDay} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} />;
+                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onStartNewDay={handleStartNewDay} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} onResolveTicket={handleResolveTicket} />;
             case 'agent_portal':
                 return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} />;
             case 'auth':

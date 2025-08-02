@@ -1,6 +1,5 @@
-// ====================================================
-// --- File: server/middleware/authMiddleware.js ---
-// ====================================================
+// File: server/middleware/authMiddleware.js
+
 const jwt = require('jsonwebtoken');
 const secrets = require('../config/secrets');
 
