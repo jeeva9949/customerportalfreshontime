@@ -1,5 +1,5 @@
 /*
- * server/controllers/agentController.js
+ * server/controllers/agentController.js (THIS IS THE FIX)
  */
 const { Agent } = require('../models');
 exports.getAllAgents = async (req, res) => {
@@ -7,13 +7,19 @@ exports.getAllAgents = async (req, res) => {
     catch (error) { res.status(500).json({ message: 'Error fetching agents', error: error.message }); }
 };
 exports.createAgent = async (req, res) => {
-    try { res.status(201).json(await Agent.create(req.body)); } 
-    catch (error) { res.status(500).json({ message: 'Error creating agent', error: error.message }); }
+    try {
+        // FIX: Ensure all fields from the form are included
+        const { name, email, password, mobile, bank_details, salary_status, join_date } = req.body;
+        const newAgent = await Agent.create({ name, email, password, mobile, bank_details, salary_status, join_date });
+        res.status(201).json(newAgent);
+    } catch (error) { res.status(500).json({ message: 'Error creating agent', error: error.message }); }
 };
 exports.updateAgent = async (req, res) => {
     try {
         const { id } = req.params;
-        const [updated] = await Agent.update(req.body, { where: { id: id } });
+        // FIX: Ensure all fields from the form are included
+        const { name, email, mobile, bank_details, salary_status, join_date } = req.body; 
+        const [updated] = await Agent.update({ name, email, mobile, bank_details, salary_status, join_date }, { where: { id: id } });
         if (updated) { return res.status(200).json(await Agent.findByPk(id, { attributes: { exclude: ['password'] } })); }
         throw new Error('Agent not found');
     } catch (error) { res.status(500).json({ message: 'Error updating agent', error: error.message }); }

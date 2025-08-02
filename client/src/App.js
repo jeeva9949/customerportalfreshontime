@@ -11,7 +11,7 @@ const StatusPill = ({ status }) => {
         Paid: 'bg-green-100 text-green-800', Unpaid: 'bg-red-100 text-red-800',
         Due: 'bg-yellow-100 text-yellow-800'
     };
-    return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status}</span>;
+    return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
 };
 const Modal = ({ title, children, onClose }) => (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
@@ -109,8 +109,8 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
         else {
             const defaultState = {
                 addCustomer: { name: '', address: '', mobile: '', email: '', first_purchase_date: new Date().toISOString().split('T')[0] },
-                addAgent: { name: '', mobile: '', email: '', password: '', join_date: new Date().toISOString().split('T')[0], bank_details: '' },
-                createDelivery: { customerId: '', agentId: '', item: 'Tropical Fruit Bowl', delivery_date: new Date().toISOString().split('T')[0] },
+                addAgent: { name: '', mobile: '', email: '', password: '', join_date: new Date().toISOString().split('T')[0], salary_status: 'Unpaid', bank_details: '' },
+                createDelivery: { customerId: '', agentId: '', item: 'Tropical Fruit Bowl', delivery_date: new Date().toISOString().split('T')[0], status: 'Pending' },
                 addPayment: { customer_id: '', amount: '', status: 'Due', due_date: new Date().toISOString().split('T')[0] }
             };
             setFormState(defaultState[type]);
@@ -182,6 +182,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
                         <input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className="p-2 border rounded w-full" required/>
                         <input type="password" name="password" value={formState.password || ''} onChange={handleFormChange} placeholder="Login Password" className="p-2 border rounded w-full" required={modalType === 'addAgent'}/>
                         <textarea name="bank_details" value={formState.bank_details || ''} onChange={handleFormChange} placeholder="Bank Details (Account #, IFSC)" className="p-2 border rounded w-full"/>
+                        <div><label className="text-sm">Joined Date</label><input type="date" name="join_date" value={formState.join_date?.split('T')[0] || ''} onChange={handleFormChange} className="p-2 border rounded w-full"/></div>
                         <div><label className="text-sm">Salary Status</label><select name="salary_status" value={formState.salary_status || 'Unpaid'} onChange={handleFormChange} className="p-2 border rounded w-full"><option>Unpaid</option><option>Paid</option></select></div>
                         <button type="submit" className="bg-blue-600 text-white w-full py-2 rounded">Save Agent</button>
                     </form>
@@ -233,14 +234,14 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
                 {activeTab === 'customers' && (
                     <><SearchBar onSearch={setSearchTerm} placeholder="Search by name or mobile..." />
                     <button onClick={() => openModal('addCustomer')} className="bg-blue-600 text-white py-2 px-4 rounded mb-4">+ Add Customer</button>
-                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Name</th><th className="text-left p-2">Address</th><th className="text-left p-2">Email</th><th className="text-left p-2">Mobile</th><th className="text-left p-2">Actions</th></tr></thead>
-                    <tbody>{filteredCustomers.map(c => (<tr key={c.id} className="border-b"><td className="p-2">{c.name}</td><td className="p-2">{c.address}</td><td className="p-2">{c.email}</td><td className="p-2">{c.mobile}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editCustomer', c)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeleteCustomer(c.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>
+                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Name</th><th className="text-left p-2">Address</th><th className="text-left p-2">Email</th><th className="text-left p-2">Mobile</th><th className="text-left p-2">First Purchase</th><th className="text-left p-2">Actions</th></tr></thead>
+                    <tbody>{filteredCustomers.map(c => (<tr key={c.id} className="border-b"><td className="p-2">{c.name}</td><td className="p-2">{c.address}</td><td className="p-2">{c.email}</td><td className="p-2">{c.mobile}</td><td className="p-2">{new Date(c.first_purchase_date).toLocaleDateString()}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editCustomer', c)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeleteCustomer(c.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>
                 )}
                 {activeTab === 'agents' && (
                     <><SearchBar onSearch={setSearchTerm} placeholder="Search by name or email..." />
                     <button onClick={() => openModal('addAgent')} className="bg-blue-600 text-white py-2 px-4 rounded mb-4">+ Add Agent</button>
-                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Name</th><th className="text-left p-2">Email</th><th className="text-left p-2">Mobile</th><th className="text-left p-2">Bank Details</th><th className="text-left p-2">Actions</th></tr></thead>
-                    <tbody>{filteredAgents.map(a => (<tr key={a.id} className="border-b"><td className="p-2">{a.name}</td><td className="p-2">{a.email}</td><td className="p-2">{a.mobile}</td><td className="p-2">{a.bank_details}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editAgent', a)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>
+                    <table className="min-w-full"><thead><tr><th className="text-left p-2">Name</th><th className="text-left p-2">Email</th><th className="text-left p-2">Mobile</th><th className="text-left p-2">Joined Date</th><th className="text-left p-2">Salary Status</th><th className="text-left p-2">Bank Details</th><th className="text-left p-2">Actions</th></tr></thead>
+                    <tbody>{filteredAgents.map(a => (<tr key={a.id} className="border-b"><td className="p-2">{a.name}</td><td className="p-2">{a.email}</td><td className="p-2">{a.mobile}</td><td className="p-2">{new Date(a.join_date).toLocaleDateString()}</td><td className="p-2"><StatusPill status={a.salary_status} /></td><td className="p-2">{a.bank_details}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editAgent', a)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>
                 )}
                 {activeTab === 'payments' && (
                     <><SearchBar onSearch={setSearchTerm} placeholder="Search by customer name..." />
@@ -258,25 +259,44 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, onA
 function AgentPortal({ agent, onLogout, onUpdateDelivery }) {
     const [deliveries, setDeliveries] = useState([]);
     const [customers, setCustomers] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedDelivery, setSelectedDelivery] = useState(null);
     const token = localStorage.getItem('token');
     
-    useEffect(() => {
+    const fetchData = useCallback(async () => {
+        if (!token || !agent) return;
         const authHeader = { 'Authorization': `Bearer ${token}` };
-        const fetchData = async () => {
-            if (!token || !agent) return;
-            const [deliveriesRes, customersRes] = await Promise.all([
-                fetch(`${API_URL}/deliveries`, { headers: authHeader }),
-                fetch(`${API_URL}/customers`, { headers: authHeader })
-            ]);
-            const allDeliveries = await deliveriesRes.json();
-            setCustomers(await customersRes.json());
-            setDeliveries(allDeliveries.filter(d => d.agent_id === agent.id));
-        };
-        fetchData();
+        const [deliveriesRes, customersRes] = await Promise.all([
+            fetch(`${API_URL}/deliveries`, { headers: authHeader }),
+            fetch(`${API_URL}/customers`, { headers: authHeader })
+        ]);
+        const allDeliveries = await deliveriesRes.json();
+        setCustomers(await customersRes.json());
+        setDeliveries(allDeliveries.filter(d => d.agent_id === agent.id));
     }, [agent, token]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    const handleStatusUpdate = (delivery, newStatus) => {
+        onUpdateDelivery({ ...delivery, status: newStatus });
+        setIsModalOpen(false);
+    };
 
     return (
         <div className="p-6 bg-gray-100 min-h-screen">
+            {isModalOpen && selectedDelivery && (
+                <Modal title="Update Delivery Status" onClose={() => setIsModalOpen(false)}>
+                    <div className="space-y-4">
+                        <p>Update status for <strong>{customers.find(c => c.id === selectedDelivery.customer_id)?.name}</strong>:</p>
+                        <div className="flex justify-around">
+                            <button onClick={() => handleStatusUpdate(selectedDelivery, 'In Transit')} className="bg-blue-500 text-white px-4 py-2 rounded">In Transit</button>
+                            <button onClick={() => handleStatusUpdate(selectedDelivery, 'Delivered')} className="bg-green-500 text-white px-4 py-2 rounded">Delivered</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-gray-800">Welcome, {agent.name}</h1>
                 <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Logout</button>
@@ -288,10 +308,15 @@ function AgentPortal({ agent, onLogout, onUpdateDelivery }) {
                     return (
                         <div key={delivery.id} className="bg-white p-4 rounded-lg shadow-md">
                             <div className="flex justify-between items-start">
-                                <p className="font-bold text-lg">{customer?.name || 'N/A'}</p>
+                                <div>
+                                    <p className="font-bold text-lg">{customer?.name || 'N/A'}</p>
+                                    <p className="text-sm text-gray-600">{customer?.address || 'N/A'}</p>
+                                </div>
                                 <StatusPill status={delivery.status} />
                             </div>
-                            <p className="text-sm text-gray-600">{customer?.address || 'N/A'}</p>
+                            <div className="mt-4">
+                                <button onClick={() => { setSelectedDelivery(delivery); setIsModalOpen(true); }} className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-semibold hover:bg-blue-700">Update Status</button>
+                            </div>
                         </div>
                     )
                 }) : <p>You have no assigned deliveries.</p>}
