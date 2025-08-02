@@ -16,7 +16,7 @@ const StatusPill = ({ status }) => {
         Cancelled: 'bg-red-500/20 text-red-400',
         Open: 'bg-blue-400/20 text-blue-300',
         Closed: 'bg-gray-400/20 text-gray-300',
-        Resolved: 'bg-green-500/20 text-green-400', // Added Resolved status
+        Resolved: 'bg-green-500/20 text-green-400',
         Paid: 'bg-green-100 text-green-800',
         Unpaid: 'bg-red-100 text-red-800',
         Due: 'bg-yellow-100 text-yellow-800'
@@ -120,7 +120,7 @@ function AuthPage({ onLogin, onRegister }) {
 }
 
 // --- Admin Dashboard Component ---
-function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onStartNewDay, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket }) {
+function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState('');
@@ -241,7 +241,6 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
             <div>
-                <button onClick={onStartNewDay} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg mr-4">Start New Day</button>
                 <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Logout</button>
             </div>
         </div>
@@ -708,24 +707,10 @@ export default function App() {
     const handleReportIssue = (issue) => apiRequest('/support', 'POST', issue);
     const handleResolveTicket = (ticketId) => apiRequest(`/support/${ticketId}`, 'PUT', { status: 'Resolved' });
 
-    const handleStartNewDay = () => {
-        requestConfirmation(
-            'Start New Day?',
-            "This will reset all 'Delivered' statuses to 'Pending' for the next day. Are you sure?",
-            async () => {
-                const delivered = deliveries.filter(d => d.status === 'Delivered');
-                for (const delivery of delivered) {
-                    await apiRequest(`/deliveries/${delivery.id}`, 'PUT', { ...delivery, status: 'Pending', delivery_date: new Date().toISOString() });
-                }
-                alert("New day started! Deliveries have been reset.");
-            }
-        );
-    };
-
     const renderPage = () => {
         switch (page) {
             case 'admin_dashboard':
-                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onStartNewDay={handleStartNewDay} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} onResolveTicket={handleResolveTicket} />;
+                return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} onResolveTicket={handleResolveTicket} />;
             case 'agent_portal':
                 return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} />;
             case 'auth':

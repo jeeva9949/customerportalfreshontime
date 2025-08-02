@@ -1,12 +1,13 @@
 // ====================================================
 // --- File: server/server.js (Main Entry Point) ---
 // ====================================================
-// This is the main file to start your server.
+// This version includes an automated daily reset of deliveries.
 
 const express = require('express');
 const cors = require('cors');
-const db = require('./models'); // Imports from models/index.js
-const routes = require('./routes'); // Imports the master router from routes/index.js
+const cron = require('node-cron'); // Import the cron library
+const db = require('./models'); 
+const routes = require('./routes'); 
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,32 @@ app.use('/api', routes);
 app.get('/', (req, res) => {
     res.send('FreshOnTime API is running...');
 });
+
+// --- Automated Daily Task ---
+// This schedule runs every day at midnight ('0 0 * * *').
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running daily task: Resetting delivered items for the new day...');
+    try {
+        const [updatedCount] = await db.Delivery.update(
+            { 
+                status: 'Pending',
+                delivery_date: new Date() // Set delivery date to the new day
+            },
+            { 
+                where: { 
+                    status: 'Delivered' 
+                } 
+            }
+        );
+        console.log(`Successfully reset ${updatedCount} deliveries to 'Pending' for the new day.`);
+    } catch (error) {
+        console.error('Error running the daily delivery reset task:', error);
+    }
+}, {
+    scheduled: true,
+    timezone: "Asia/Kolkata" // Set to your local timezone
+});
+
 
 // Start the server after connecting to the database
 const startServer = async () => {
