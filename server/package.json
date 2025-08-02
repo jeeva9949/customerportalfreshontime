@@ -15,7 +15,8 @@
     "jsonwebtoken": "^9.0.0",
     "mysql2": "^3.2.0",
     "node-cron": "^4.2.1",
-    "sequelize": "^6.29.0"
+    "sequelize": "^6.29.0",
+    "twilio": "^5.8.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.21",

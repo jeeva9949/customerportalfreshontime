@@ -1,5 +1,5 @@
 // ====================================================
-// --- File: server/models/agent.js ---
+// --- File: server/models/agent.js (UPDATED) ---
 // ====================================================
 'use strict';
 const { Model } = require('sequelize');
@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) { 
         Agent.hasMany(models.Delivery, { foreignKey: 'agent_id' }); 
         Agent.hasMany(models.SupportTicket, { foreignKey: 'agent_id' });
+        Agent.hasMany(models.PasswordRequest, { foreignKey: 'agent_id' });
     }
   }
   Agent.init({
@@ -20,13 +21,15 @@ module.exports = (sequelize, DataTypes) => {
     mobile: DataTypes.STRING, 
     join_date: DataTypes.DATE, 
     bank_details: DataTypes.TEXT,
-    salary_status: { type: DataTypes.ENUM('Paid', 'Unpaid'), defaultValue: 'Unpaid' }
+    salary_status: { type: DataTypes.ENUM('Paid', 'Unpaid'), defaultValue: 'Unpaid' },
+    notifications_enabled: { type: DataTypes.BOOLEAN, defaultValue: true } // NEW FIELD
   }, { 
     sequelize, 
     modelName: 'Agent', 
     tableName: 'agents', 
     hooks: { 
-      beforeCreate: (agent) => { if (agent.password) { agent.password = bcrypt.hashSync(agent.password, 10); } } 
+      beforeCreate: (agent) => { if (agent.password) { agent.password = bcrypt.hashSync(agent.password, 10); } },
+      beforeUpdate: (agent) => { if (agent.changed('password')) { agent.password = bcrypt.hashSync(agent.password, 10); } }
     } 
   });
   return Agent;

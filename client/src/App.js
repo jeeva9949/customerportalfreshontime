@@ -15,7 +15,7 @@ const StatusPill = ({ status }) => {
         Failed: 'bg-red-500/20 text-red-400',
         Cancelled: 'bg-red-500/20 text-red-400',
         Open: 'bg-blue-400/20 text-blue-300',
-        Closed: 'bg-gray-400/20 text-gray-300',
+        Approved: 'bg-green-500/20 text-green-400',
         Resolved: 'bg-green-500/20 text-green-400',
         Paid: 'bg-green-100 text-green-800',
         Unpaid: 'bg-red-100 text-red-800',
@@ -299,20 +299,23 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
 }
 
 // --- Agent Portal Component ---
-function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDelivery, onReportIssue, onRequestPasswordChange }) {
+function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, onUpdateDelivery, onReportIssue, onRequestPasswordChange, onUpdateNotificationPreference }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDelivery, setSelectedDelivery] = useState(null);
     const [newPassword, setNewPassword] = useState('');
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [issueType, setIssueType] = useState('Incorrect Address');
     const [issueDetails, setIssueDetails] = useState('');
-
+    
     const agentDetails = useMemo(() => {
-        const fullDetails = allCustomers.find(c => c.id === agent.id);
-        return { ...agent, ...fullDetails };
-    }, [agent, allCustomers]);
+        return allAgents.find(a => a.id === agent.id) || agent;
+    }, [agent, allAgents]);
 
+    const [notificationsEnabled, setNotificationsEnabled] = useState(agentDetails.notifications_enabled);
+
+    useEffect(() => {
+        setNotificationsEnabled(agentDetails.notifications_enabled);
+    }, [agentDetails]);
 
     const agentDeliveries = useMemo(() => allDeliveries.filter(d => d.agent_id === agent.id), [allDeliveries, agent.id]);
 
@@ -364,6 +367,12 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
             setNewPassword('');
             alert('Password change requested. An admin will approve it shortly.');
         }
+    };
+
+    const handleNotificationToggle = () => {
+        const newPreference = !notificationsEnabled;
+        setNotificationsEnabled(newPreference);
+        onUpdateNotificationPreference(newPreference);
     };
 
     const BottomNavLink = ({ page, label, icon }) => (
@@ -423,11 +432,11 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
                         <div className="bg-slate-800 p-6 rounded-2xl shadow-md max-w-2xl mx-auto">
                             <div className="flex items-center space-x-4 mb-6">
                                 <div className="w-16 h-16 rounded-full bg-orange-500 text-white flex items-center justify-center text-3xl font-bold">
-                                    {agent.name.charAt(0).toUpperCase()}
+                                    {agentDetails.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-bold text-white">{agent.name}</h3>
-                                    <p className="text-gray-400">{agent.email}</p>
+                                    <h3 className="text-xl font-bold text-white">{agentDetails.name}</h3>
+                                    <p className="text-gray-400">{agentDetails.email}</p>
                                     <p className="text-gray-400">{agentDetails.mobile || '+1 (555) 123-4567'}</p>
                                 </div>
                             </div>
@@ -449,7 +458,7 @@ function AgentPortal({ agent, allDeliveries, allCustomers, onLogout, onUpdateDel
                                         <input 
                                             type="checkbox" 
                                             checked={notificationsEnabled}
-                                            onChange={() => setNotificationsEnabled(!notificationsEnabled)}
+                                            onChange={handleNotificationToggle}
                                             id="notifications-toggle" 
                                             className="sr-only peer"
                                         />
@@ -739,13 +748,15 @@ export default function App() {
     const handleResolveTicket = (ticketId) => apiRequest(`/support/${ticketId}`, 'PUT', { status: 'Resolved' });
     const handleRequestPasswordChange = (newPassword) => apiRequest('/password-requests', 'POST', { newPassword });
     const handleApprovePassword = (requestId) => apiRequest(`/password-requests/${requestId}/approve`, 'PUT');
+    const handleUpdateNotificationPreference = (preference) => apiRequest('/agents/notifications', 'PUT', { notifications_enabled: preference });
+
 
     const renderPage = () => {
         switch (page) {
             case 'admin_dashboard':
                 return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} passwordRequests={passwordRequests} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} onResolveTicket={handleResolveTicket} onApprovePassword={handleApprovePassword} />;
             case 'agent_portal':
-                return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allCustomers={agents} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} onRequestPasswordChange={handleRequestPasswordChange} />;
+                return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allAgents={agents} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} onRequestPasswordChange={handleRequestPasswordChange} onUpdateNotificationPreference={handleUpdateNotificationPreference} />;
             case 'auth':
             default:
                 return <AuthPage onLogin={handleLogin} onRegister={handleRegister} />;

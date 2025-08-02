@@ -17,4 +17,3 @@ module.exports = (sequelize, DataTypes) => {
   }, { sequelize, modelName: 'PasswordRequest', tableName: 'password_requests' });
   return PasswordRequest;
 };
-
