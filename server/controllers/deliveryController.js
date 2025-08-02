@@ -9,8 +9,7 @@ exports.getAllDeliveries = async (req, res) => {
 };
 exports.createDelivery = async (req, res) => {
     try {
-        const { customer_id, agent_id, delivery_date, item, status } = req.body;
-        const newDelivery = await Delivery.create({ customer_id, agent_id, delivery_date, item, status });
+        const newDelivery = await Delivery.create(req.body);
         res.status(201).json(newDelivery);
     } catch (error) { res.status(500).json({ message: 'Error creating delivery', error: error.message }); }
 };

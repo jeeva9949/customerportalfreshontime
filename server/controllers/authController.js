@@ -1,6 +1,5 @@
 /*
- * server/controllers/authController.js (UPDATED)
- * Now includes the secret code check for admin registration.
+ * server/controllers/authController.js
  */
 const { User } = require('../models');
 const bcrypt = require('bcryptjs');

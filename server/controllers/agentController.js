@@ -2,6 +2,9 @@
  * server/controllers/agentController.js (THIS IS THE FIX)
  */
 const { Agent } = require('../models');
+const jwt = require('jsonwebtoken'); // <-- FIX: This line was missing
+const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'; // <-- FIX: This line was missing
+
 exports.getAllAgents = async (req, res) => {
     try { res.status(200).json(await Agent.findAll({ attributes: { exclude: ['password'] } })); } 
     catch (error) { res.status(500).json({ message: 'Error fetching agents', error: error.message }); }
