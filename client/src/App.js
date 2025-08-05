@@ -1,65 +1,213 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { format } from 'date-fns';
+import { CSVLink } from 'react-csv';
 
 // --- Configuration ---
-// Define the backend API URL. Ensure your backend server is running on this port.
 const API_URL = 'http://localhost:5000/api';
 
 // --- Reusable UI Components ---
 
-// Displays a colored pill for different statuses (e.g., Pending, Delivered).
 const StatusPill = ({ status }) => {
     const statusClasses = {
-        Pending: 'bg-yellow-400/20 text-yellow-300',
-        'In Transit': 'bg-blue-400/20 text-blue-300',
-        Delivered: 'bg-green-500/20 text-green-400',
-        Failed: 'bg-red-500/20 text-red-400',
-        Cancelled: 'bg-red-500/20 text-red-400',
-        Open: 'bg-blue-400/20 text-blue-300',
-        Approved: 'bg-green-500/20 text-green-400',
-        Resolved: 'bg-green-500/20 text-green-400',
-        Paid: 'bg-green-100 text-green-800',
-        Unpaid: 'bg-red-100 text-red-800',
+        Pending: 'bg-yellow-400/20 text-yellow-300', 'In Transit': 'bg-blue-400/20 text-blue-300',
+        Delivered: 'bg-green-500/20 text-green-400', Failed: 'bg-red-500/20 text-red-400',
+        Cancelled: 'bg-red-500/20 text-red-400', Open: 'bg-blue-400/20 text-blue-300',
+        Approved: 'bg-green-500/20 text-green-400', Resolved: 'bg-green-500/20 text-green-400',
+        Paid: 'bg-green-100 text-green-800', Unpaid: 'bg-red-100 text-red-800',
         Due: 'bg-yellow-100 text-yellow-800'
     };
     return <span className={`px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
 };
 
-// A generic modal component for pop-up forms and dialogs.
 const Modal = ({ title, children, onClose }) => (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-lg transform transition-all">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">{title}</h3>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">&times;</button>
-            </div>
+            <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold">{title}</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">&times;</button></div>
             {children}
         </div>
     </div>
 );
 
-// A specific modal for confirming actions like deletion.
 const ConfirmModal = ({ title, message, onConfirm, onCancel }) => (
     <Modal title={title} onClose={onCancel}>
         <p className="mb-6 text-gray-600 dark:text-gray-300">{message}</p>
-        <div className="flex justify-end gap-4">
-            <button onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
-            <button onClick={onConfirm} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Confirm</button>
-        </div>
+        <div className="flex justify-end gap-4"><button onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button><button onClick={onConfirm} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Confirm</button></div>
     </Modal>
 );
 
-// A styled button for navigating tabs in the admin dashboard.
 const TabButton = ({ label, isActive, onClick }) => (
     <button onClick={onClick} className={`px-4 py-2 text-sm font-medium rounded-md ${isActive ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{label}</button>
 );
 
-// A search input component.
 const SearchBar = ({ onSearch, placeholder }) => (
     <input type="text" onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg w-full md:w-1/3 mb-4 bg-white dark:bg-gray-700" />
 );
 
 
+// --- New Reports & Export Component ---
+const ReportsAndExport = ({ deliveries, payments, agents }) => {
+    const [reportType, setReportType] = useState('deliveries');
+    const [filters, setFilters] = useState({
+        startDate: '',
+        endDate: '',
+        agentId: 'all',
+        status: 'all'
+    });
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const filteredData = useMemo(() => {
+        setIsLoading(true);
+        let data = reportType === 'deliveries' ? deliveries : payments;
+
+        if (filters.startDate) {
+            data = data.filter(item => new Date(item.delivery_date || item.due_date) >= new Date(filters.startDate));
+        }
+        if (filters.endDate) {
+            data = data.filter(item => new Date(item.delivery_date || item.due_date) <= new Date(filters.endDate));
+        }
+        if (filters.agentId !== 'all') {
+            data = data.filter(item => item.agent_id == filters.agentId);
+        }
+        if (filters.status !== 'all') {
+            data = data.filter(item => item.status === filters.status);
+        }
+        
+        // Simulate loading delay
+        setTimeout(() => setIsLoading(false), 300);
+        return data;
+    }, [reportType, deliveries, payments, filters]);
+
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+        doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 16);
+        doc.autoTable({
+            head: [['Date', 'Customer', 'Agent', 'Status', 'Amount']],
+            body: filteredData.map(item => [
+                format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd'),
+                item.customer?.name || 'N/A',
+                item.agent?.name || 'N/A',
+                item.status,
+                item.amount ? `$${item.amount}` : 'N/A'
+            ]),
+            startY: 20
+        });
+        doc.save(`${reportType}_report.pdf`);
+    };
+
+    const getCsvData = () => {
+        return filteredData.map(item => ({
+            Date: format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd'),
+            Customer: item.customer?.name || 'N/A',
+            Agent: item.agent?.name || 'N/A',
+            Status: item.status,
+            Amount: item.amount || 'N/A',
+            Remarks: '' // Placeholder for remarks
+        }));
+    };
+
+    return (
+        <div>
+            <div className="sticky top-0 bg-gray-50 py-4 z-10">
+                <div className="flex flex-wrap items-center gap-4 p-4 bg-white rounded-lg shadow">
+                    {/* Report Type Selector */}
+                    <div className="flex-grow">
+                        <label className="block text-sm font-medium text-gray-700">Report Type</label>
+                        <select value={reportType} onChange={(e) => setReportType(e.target.value)} className="p-2 border rounded-md w-full">
+                            <option value="deliveries">Deliveries Report</option>
+                            <option value="payments">Payments Report</option>
+                        </select>
+                    </div>
+                    {/* Date Filters */}
+                    <div className="flex-grow">
+                        <label className="block text-sm font-medium text-gray-700">Date From</label>
+                        <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="p-2 border rounded-md w-full"/>
+                    </div>
+                    <div className="flex-grow">
+                        <label className="block text-sm font-medium text-gray-700">Date To</label>
+                        <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="p-2 border rounded-md w-full"/>
+                    </div>
+                    {/* Agent Filter */}
+                    <div className="flex-grow">
+                        <label className="block text-sm font-medium text-gray-700">Agent</label>
+                        <select name="agentId" value={filters.agentId} onChange={handleFilterChange} className="p-2 border rounded-md w-full">
+                            <option value="all">All Agents</option>
+                            {agents.map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
+                        </select>
+                    </div>
+                    {/* Status Filter */}
+                    <div className="flex-grow">
+                        <label className="block text-sm font-medium text-gray-700">Status</label>
+                        <select name="status" value={filters.status} onChange={handleFilterChange} className="p-2 border rounded-md w-full">
+                            <option value="all">All Statuses</option>
+                            <option>Pending</option>
+                            <option>In Transit</option>
+                            <option>Delivered</option>
+                            <option>Failed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-6 bg-white p-4 rounded-lg shadow">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold">Report Data</h3>
+                    <div className="flex gap-2">
+                        <CSVLink data={getCsvData()} filename={`${reportType}_report.csv`} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700">
+                            <span>📄</span> Export as CSV
+                        </CSVLink>
+                        <button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700">
+                           <span>📈</span> Export as PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    {isLoading ? (
+                        <div className="text-center py-10">Loading...</div>
+                    ) : filteredData.length > 0 ? (
+                        <table className="min-w-full">
+                            <thead>
+                                <tr>
+                                    <th className="text-left p-2">Date</th>
+                                    <th className="text-left p-2">Customer</th>
+                                    <th className="text-left p-2">Agent</th>
+                                    <th className="text-left p-2">Status</th>
+                                    {reportType === 'payments' && <th className="text-left p-2">Amount</th>}
+                                    <th className="text-left p-2">Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredData.map(item => (
+                                    <tr key={item.id} className="border-b">
+                                        <td className="p-2">{format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd')}</td>
+                                        <td className="p-2">{item.customer?.name || 'N/A'}</td>
+                                        <td className="p-2">{item.agent?.name || 'N/A'}</td>
+                                        <td className="p-2"><StatusPill status={item.status} /></td>
+                                        {reportType === 'payments' && <td className="p-2">${item.amount}</td>}
+                                        <td className="p-2"></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-10 text-gray-500">No data found for the selected filters.</div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 // --- Authentication Page Component ---
+// ... (AuthPage component remains unchanged) ...
 function AuthPage({ onLogin, onRegister }) {
     const [isLogin, setIsLogin] = useState(true);
     const [userType, setUserType] = useState('agent');
@@ -119,7 +267,9 @@ function AuthPage({ onLogin, onRegister }) {
     );
 }
 
+
 // --- Admin Dashboard Component ---
+// ... (AdminDashboard component is updated to include the new Reports tab) ...
 function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, passwordRequests, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket, onApprovePassword }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -255,6 +405,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
             <TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
             <TabButton label="Support" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} />
             <TabButton label="Password Requests" isActive={activeTab === 'password_requests'} onClick={() => setActiveTab('password_requests')} />
+            <TabButton label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
         </div>
         <div className="bg-white shadow-md rounded-lg p-4 md:p-6">
             <div className="overflow-x-auto">
@@ -292,6 +443,9 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
                     <table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th><th className="text-left p-2">Actions</th></tr></thead>
                     <tbody>{filteredPasswordRequests.map(r => (<tr key={r.id} className="border-b"><td className="p-2">{r.agent?.name}</td><td className="p-2"><StatusPill status={r.status} /></td><td className="p-2">{new Date(r.createdAt).toLocaleString()}</td><td className="p-2">{r.status === 'Pending' && <button onClick={() => onApprovePassword(r.id)} className="text-green-600 hover:underline">Approve</button>}</td></tr>))}</tbody></table></>
                 )}
+                {activeTab === 'reports' && (
+                    <ReportsAndExport deliveries={deliveries} payments={payments} agents={agents} />
+                )}
             </div>
         </div>
       </div>
@@ -299,6 +453,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
 }
 
 // --- Agent Portal Component ---
+// ... (AgentPortal component remains unchanged) ...
 function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, onUpdateDelivery, onReportIssue, onRequestPasswordChange, onUpdateNotificationPreference }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -478,9 +633,9 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
                             <div>
                                 <h3 className="text-lg font-semibold text-white mb-3">Contact Admin</h3>
                                 <div className="flex gap-4">
-                                    <button className="flex-1 flex items-center justify-center gap-2 border border-slate-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-700 transition-colors">
+                                    <a href="tel:+919493532772" className="flex-1 flex items-center justify-center gap-2 border border-slate-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-700 transition-colors">
                                         <span>📞</span> Call Support
-                                    </button>
+                                    </a>
                                     <button className="flex-1 flex items-center justify-center gap-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors">
                                         <span>💬</span> Chat with Admin
                                     </button>
