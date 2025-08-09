@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-
-// pdf related dependencies
-// import jsPDF from 'jspdf';
-// import 'jspdf-autotable';
-// import autoTable from 'jspdf-autotable';
-
-
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { CSVLink } from 'react-csv';
 
@@ -89,24 +84,22 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
         return data;
     }, [reportType, deliveries, payments, filters]);
 
-    // const exportToPDF = () => {
-    //     const doc = new jsPDF();
-    //     doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 16);
-
-    //     // add doc.autoTable i just removed
-    //     autoTable({
-    //         head: [['Date', 'Customer', 'Agent', 'Status', 'Amount']],
-    //         body: filteredData.map(item => [
-    //             format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd'),
-    //             item.customer?.name || 'N/A',
-    //             item.agent?.name || 'N/A',
-    //             item.status,
-    //             item.amount ? `$${item.amount}` : 'N/A'
-    //         ]),
-    //         startY: 20
-    //     });
-    //     doc.save(`${reportType}_report.pdf`);
-    // };
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+        doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 16);
+        autoTable(doc, {
+            head: [['Date', 'Customer', 'Agent', 'Status', 'Amount']],
+            body: filteredData.map(item => [
+                format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd'),
+                item.customer?.name || 'N/A',
+                item.agent?.name || 'N/A',
+                item.status,
+                item.amount ? `$${item.amount}` : 'N/A'
+            ]),
+            startY: 20
+        });
+        doc.save(`${reportType}_report.pdf`);
+    };
 
     const getCsvData = () => {
         return filteredData.map(item => ({
@@ -169,10 +162,9 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
                         <CSVLink data={getCsvData()} filename={`${reportType}_report.csv`} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700">
                             <span>📄</span> Export as CSV
                         </CSVLink>
- {/* commented the export as pdf beacuse we will  fix it later */}
-                        {/* <button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700">
+                        <button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700">
                            <span>📈</span> Export as PDF
-                        </button> */}
+                        </button>
                     </div>
                 </div>
 
@@ -215,7 +207,6 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
 
 
 // --- Authentication Page Component ---
-// ... (AuthPage component remains unchanged) ...
 function AuthPage({ onLogin, onRegister }) {
     const [isLogin, setIsLogin] = useState(true);
     const [userType, setUserType] = useState('agent');
@@ -277,7 +268,6 @@ function AuthPage({ onLogin, onRegister }) {
 
 
 // --- Admin Dashboard Component ---
-// ... (AdminDashboard component is updated to include the new Reports tab) ...
 function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, passwordRequests, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket, onApprovePassword }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -461,7 +451,6 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
 }
 
 // --- Agent Portal Component ---
-// ... (AgentPortal component remains unchanged) ...
 function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, onUpdateDelivery, onReportIssue, onRequestPasswordChange, onUpdateNotificationPreference }) {
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -536,6 +525,16 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
         const newPreference = !notificationsEnabled;
         setNotificationsEnabled(newPreference);
         onUpdateNotificationPreference(newPreference);
+    };
+
+    const handleNavigate = (address) => {
+        if (!address) {
+            alert("Address not available for this delivery.");
+            return;
+        }
+        const encodedAddress = encodeURIComponent(address);
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`;
+        window.open(url, '_blank');
     };
 
     const BottomNavLink = ({ page, label, icon }) => (
@@ -710,7 +709,7 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
                                             <StatusPill status={delivery.status} />
                                         </div>
                                         <div className="flex gap-3 mt-4">
-                                            <button className="flex-1 bg-slate-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 text-sm flex items-center justify-center gap-2">
+                                            <button onClick={() => handleNavigate(customer?.address)} className="flex-1 bg-slate-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 text-sm flex items-center justify-center gap-2">
                                                 <span>⎋</span> Navigate
                                             </button>
                                             <button onClick={() => openStatusModal(delivery)} className="flex-1 bg-orange-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-orange-600 text-sm flex items-center justify-center gap-2">
