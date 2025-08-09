@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+
+// pdf related dependencies
+// import jsPDF from 'jspdf';
+// import 'jspdf-autotable';
+// import autoTable from 'jspdf-autotable';
+
+
 import { format } from 'date-fns';
 import { CSVLink } from 'react-csv';
 
@@ -73,7 +78,7 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
             data = data.filter(item => new Date(item.delivery_date || item.due_date) <= new Date(filters.endDate));
         }
         if (filters.agentId !== 'all') {
-            data = data.filter(item => item.agent_id == filters.agentId);
+            data = data.filter(item => item.agent_id === filters.agentId);
         }
         if (filters.status !== 'all') {
             data = data.filter(item => item.status === filters.status);
@@ -84,22 +89,24 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
         return data;
     }, [reportType, deliveries, payments, filters]);
 
-    const exportToPDF = () => {
-        const doc = new jsPDF();
-        doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 16);
-        doc.autoTable({
-            head: [['Date', 'Customer', 'Agent', 'Status', 'Amount']],
-            body: filteredData.map(item => [
-                format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd'),
-                item.customer?.name || 'N/A',
-                item.agent?.name || 'N/A',
-                item.status,
-                item.amount ? `$${item.amount}` : 'N/A'
-            ]),
-            startY: 20
-        });
-        doc.save(`${reportType}_report.pdf`);
-    };
+    // const exportToPDF = () => {
+    //     const doc = new jsPDF();
+    //     doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 16);
+
+    //     // add doc.autoTable i just removed
+    //     autoTable({
+    //         head: [['Date', 'Customer', 'Agent', 'Status', 'Amount']],
+    //         body: filteredData.map(item => [
+    //             format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd'),
+    //             item.customer?.name || 'N/A',
+    //             item.agent?.name || 'N/A',
+    //             item.status,
+    //             item.amount ? `$${item.amount}` : 'N/A'
+    //         ]),
+    //         startY: 20
+    //     });
+    //     doc.save(`${reportType}_report.pdf`);
+    // };
 
     const getCsvData = () => {
         return filteredData.map(item => ({
@@ -162,9 +169,10 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
                         <CSVLink data={getCsvData()} filename={`${reportType}_report.csv`} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700">
                             <span>📄</span> Export as CSV
                         </CSVLink>
-                        <button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700">
+ {/* commented the export as pdf beacuse we will  fix it later */}
+                        {/* <button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700">
                            <span>📈</span> Export as PDF
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 
