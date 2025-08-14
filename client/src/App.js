@@ -13,39 +13,50 @@ const SOCKET_URL = 'http://localhost:5000';
 
 const StatusPill = ({ status }) => {
     const statusClasses = {
-        Pending: 'bg-yellow-400/20 text-yellow-300', 'In Transit': 'bg-blue-400/20 text-blue-300',
-        Delivered: 'bg-green-500/20 text-green-400', Failed: 'bg-red-500/20 text-red-400',
-        Cancelled: 'bg-red-500/20 text-red-400', Open: 'bg-blue-400/20 text-blue-300',
-        Approved: 'bg-green-500/20 text-green-400', Resolved: 'bg-green-500/20 text-green-400',
+        Pending: 'bg-yellow-100 text-yellow-800', 'In Transit': 'bg-blue-100 text-blue-800',
+        Delivered: 'bg-green-100 text-green-800', Failed: 'bg-red-100 text-red-800',
+        Cancelled: 'bg-red-100 text-red-800', Open: 'bg-blue-100 text-blue-800',
+        Approved: 'bg-green-100 text-green-800', Resolved: 'bg-green-100 text-green-800',
         Paid: 'bg-green-100 text-green-800', Unpaid: 'bg-red-100 text-red-800',
         Due: 'bg-yellow-100 text-yellow-800'
     };
-    return <span className={`px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
+    return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
 };
 
 const Modal = ({ title, children, onClose }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-lg transform transition-all">
-            <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold">{title}</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">&times;</button></div>
-            {children}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 transition-opacity duration-300">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all duration-300 scale-95 opacity-0 animate-scale-in">
+            <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl p-1 rounded-full hover:bg-gray-100">&times;</button>
+            </div>
+            <div className="p-6">
+                {children}
+            </div>
         </div>
     </div>
 );
 
 const ConfirmModal = ({ title, message, onConfirm, onCancel }) => (
     <Modal title={title} onClose={onCancel}>
-        <p className="mb-6 text-gray-600 dark:text-gray-300">{message}</p>
-        <div className="flex justify-end gap-4"><button onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button><button onClick={onConfirm} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700">Confirm</button></div>
+        <p className="mb-6 text-gray-600">{message}</p>
+        <div className="flex justify-end gap-4">
+            <button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+            <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Confirm</button>
+        </div>
     </Modal>
 );
 
 const TabButton = ({ label, isActive, onClick }) => (
-    <button onClick={onClick} className={`px-4 py-2 text-sm font-medium rounded-md ${isActive ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{label}</button>
+    <button onClick={onClick} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100'}`}>
+        {label}
+    </button>
 );
 
 const SearchBar = ({ onSearch, placeholder }) => (
-    <input type="text" onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg w-full md:w-1/3 mb-4 bg-white dark:bg-gray-700" />
+    <input type="text" onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="p-2 border border-gray-300 rounded-lg w-full md:w-auto flex-grow bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
 );
+
 
 // --- Reports & Export Component ---
 const ReportsAndExport = ({ deliveries, payments, agents }) => {
@@ -97,22 +108,43 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
 
     return (
         <div>
-            <div className="sticky top-0 bg-gray-50 py-4 z-10">
-                <div className="flex flex-wrap items-center gap-4 p-4 bg-white rounded-lg shadow">
-                    <div className="flex-grow"><label className="block text-sm font-medium text-gray-700">Report Type</label><select value={reportType} onChange={(e) => setReportType(e.target.value)} className="p-2 border rounded-md w-full"><option value="deliveries">Deliveries Report</option><option value="payments">Payments Report</option></select></div>
-                    <div className="flex-grow"><label className="block text-sm font-medium text-gray-700">Date From</label><input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="p-2 border rounded-md w-full"/></div>
-                    <div className="flex-grow"><label className="block text-sm font-medium text-gray-700">Date To</label><input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="p-2 border rounded-md w-full"/></div>
-                    <div className="flex-grow"><label className="block text-sm font-medium text-gray-700">Agent</label><select name="agentId" value={filters.agentId} onChange={handleFilterChange} className="p-2 border rounded-md w-full"><option value="all">All Agents</option>{agents.map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select></div>
-                    <div className="flex-grow"><label className="block text-sm font-medium text-gray-700">Status</label><select name="status" value={filters.status} onChange={handleFilterChange} className="p-2 border rounded-md w-full"><option value="all">All Statuses</option><option>Pending</option><option>In Transit</option><option>Delivered</option><option>Failed</option></select></div>
+            <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label><select value={reportType} onChange={(e) => setReportType(e.target.value)} className="p-2 border border-gray-300 rounded-md w-full"><option value="deliveries">Deliveries Report</option><option value="payments">Payments Report</option></select></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Date From</label><input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="p-2 border border-gray-300 rounded-md w-full"/></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Date To</label><input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="p-2 border border-gray-300 rounded-md w-full"/></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Agent</label><select name="agentId" value={filters.agentId} onChange={handleFilterChange} className="p-2 border border-gray-300 rounded-md w-full"><option value="all">All Agents</option>{agents.map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select></div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Status</label><select name="status" value={filters.status} onChange={handleFilterChange} className="p-2 border border-gray-300 rounded-md w-full"><option value="all">All Statuses</option><option>Pending</option><option>In Transit</option><option>Delivered</option><option>Failed</option></select></div>
                 </div>
             </div>
-            <div className="mt-6 bg-white p-4 rounded-lg shadow">
-                <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold">Report Data</h3><div className="flex gap-2"><CSVLink data={getCsvData()} filename={`${reportType}_report.csv`} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700"><span>📄</span> Export as CSV</CSVLink><button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700"><span>📈</span> Export as PDF</button></div></div>
-                <div className="overflow-x-auto">{isLoading ? <div className="text-center py-10">Loading...</div> : filteredData.length > 0 ? <table className="min-w-full"><thead><tr><th className="text-left p-2">Date</th><th className="text-left p-2">Customer</th><th className="text-left p-2">Agent</th><th className="text-left p-2">Status</th>{reportType === 'payments' && <th className="text-left p-2">Amount</th>}<th className="text-left p-2">Remarks</th></tr></thead><tbody>{filteredData.map(item => (<tr key={item.id} className="border-b"><td className="p-2">{format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd')}</td><td className="p-2">{item.customer?.name || 'N/A'}</td><td className="p-2">{item.agent?.name || 'N/A'}</td><td className="p-2"><StatusPill status={item.status} /></td>{reportType === 'payments' && <td className="p-2">${item.amount}</td>}<td className="p-2"></td></tr>))}</tbody></table> : <div className="text-center py-10 text-gray-500">No data found for the selected filters.</div>}</div>
+
+            <div className="mt-6">
+                <div className="flex justify-end items-center mb-4">
+                    <div className="flex gap-2">
+                        <CSVLink data={getCsvData()} filename={`${reportType}_report.csv`} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                            Export CSV
+                        </CSVLink>
+                        <button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700 transition-colors">
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                           Export PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto bg-white rounded-lg shadow">
+                    {isLoading ? ( <div className="text-center py-10">Loading...</div> ) : filteredData.length > 0 ? (
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>{reportType === 'payments' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>}</tr></thead>
+                            <tbody className="bg-white divide-y divide-gray-200">{filteredData.map(item => (<tr key={item.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.customer?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.agent?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={item.status} /></td>{reportType === 'payments' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.amount}</td>}</tr>))}</tbody>
+                        </table>
+                    ) : ( <div className="text-center py-10 text-gray-500">No data found for the selected filters.</div> )}
+                </div>
             </div>
         </div>
     );
 };
+
 
 // --- Authentication Page Component ---
 function AuthPage({ onLogin, onRegister }) {
@@ -142,24 +174,40 @@ function AuthPage({ onLogin, onRegister }) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4">
-            <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-                <h2 className="text-2xl font-bold text-center text-orange-500 mb-6">{isLogin ? `${userType.charAt(0).toUpperCase() + userType.slice(1)} Login` : 'Admin Registration'}</h2>
+        <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4">
+            <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1751449299/freshontimelogo_qchfme.jpg" alt="FreshOnTime Logo" className="w-32 mx-auto mb-4"/>
+                <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">{isLogin ? `${userType.charAt(0).toUpperCase() + userType.slice(1)} Login` : 'Admin Registration'}</h2>
+                <p className="text-center text-gray-500 mb-6">Welcome to FreshOnTime</p>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {!isLogin && (<><input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" className="p-3 border rounded-lg w-full" required /><input type="text" value={adminCode} onChange={(e) => setAdminCode(e.target.value)} placeholder="Admin Registration Code" className="p-3 border rounded-lg w-full" required /></>)}
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="p-3 border rounded-lg w-full" required />
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="p-3 border rounded-lg w-full" required />
-                    {error && <p className="text-red-500 text-xs text-center">{error}</p>}
-                    <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg w-full transition-colors">{isLogin ? 'Sign In' : 'Register'}</button>
+                    {!isLogin && (
+                        <>
+                            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
+                            <input type="text" value={adminCode} onChange={(e) => setAdminCode(e.target.value)} placeholder="Admin Registration Code" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
+                        </>
+                    )}
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
+                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
+                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                    <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg w-full transition-colors shadow-md hover:shadow-lg">{isLogin ? 'Sign In' : 'Register'}</button>
                 </form>
             </div>
             <div className="text-center mt-4">
-                <button onClick={() => { setIsLogin(!isLogin); setError(''); if(!isLogin) setUserType('admin'); }} className="text-slate-600 hover:underline">{isLogin ? "Need an admin account? Register" : "Already have an account? Login"}</button>
-                {isLogin && (<div className="mt-2"><button onClick={() => setUserType(userType === 'admin' ? 'agent' : 'admin')} className="text-sm text-gray-600 hover:underline">Switch to {userType === 'admin' ? 'Agent' : 'Admin'} Login</button></div>)}
+                <button onClick={() => { setIsLogin(!isLogin); setError(''); if(!isLogin) setUserType('admin'); }} className="text-indigo-600 hover:underline font-medium">
+                    {isLogin ? "Need an admin account? Register" : "Already have an account? Login"}
+                </button>
+                {isLogin && (
+                    <div className="mt-2">
+                        <button onClick={() => setUserType(userType === 'admin' ? 'agent' : 'admin')} className="text-sm text-gray-600 hover:underline">
+                            Switch to {userType === 'admin' ? 'Agent' : 'Admin'} Login
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
+
 
 // --- Admin Dashboard Component ---
 function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, passwordRequests, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket, onApprovePassword }) {
@@ -177,7 +225,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
             const defaultState = {
                 addCustomer: { name: '', address: '', mobile: '', email: '', first_purchase_date: new Date().toISOString().split('T')[0] },
                 addAgent: { name: '', mobile: '', email: '', password: '', join_date: new Date().toISOString().split('T')[0], salary_status: 'Unpaid', bank_details: '' },
-                createDelivery: { customer_id: '', agent_id: '', item: 'Tropical Fruit Bowl', delivery_date: new Date().toISOString().split('T')[0], status: 'Pending' },
+                createDelivery: { customer_id: '', agent_id: '', item: 'Tropical Fruit Bowl', delivery_date: new Date().toISOString().split('T')[0], status: 'Pending', is_recurring: false },
                 addPayment: { customer_id: '', amount: '', status: 'Due', due_date: new Date().toISOString().split('T')[0] }
             };
             setFormState(defaultState[type]);
@@ -186,8 +234,11 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
     };
   
     const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        setFormState(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormState(prev => ({ 
+            ...prev, 
+            [name]: type === 'checkbox' ? checked : value 
+        }));
     };
   
     const handleSubmit = (e) => {
@@ -216,25 +267,64 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
     const renderModalContent = () => {
         if (!isModalOpen) return null;
         const fruitBowlTypes = ['Tropical Fruit Bowl', 'Berry Blast Bowl', 'Citrus Mix', 'Custom'];
+        const inputClass = "p-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-indigo-500";
+        const labelClass = "block text-sm font-medium text-gray-700";
+        const buttonClass = "w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm";
+
         switch (modalType) {
             case 'addCustomer': case 'editCustomer':
-                return (<form onSubmit={handleSubmit} className="space-y-4"><input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Name" className="p-2 border rounded w-full" required/><input name="email" value={formState.email || ''} onChange={handleFormChange} placeholder="Email" className="p-2 border rounded w-full" required/><input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className="p-2 border rounded w-full" required/><textarea name="address" value={formState.address || ''} onChange={handleFormChange} placeholder="Address" className="p-2 border rounded w-full" required/><div><label className="text-sm">First Purchase</label><input type="date" name="first_purchase_date" value={formState.first_purchase_date?.split('T')[0] || ''} onChange={handleFormChange} className="p-2 border rounded w-full"/></div><button type="submit" className="bg-orange-500 text-white w-full py-2 rounded">Save Customer</button></form>);
+                return (<form onSubmit={handleSubmit} className="space-y-4"><input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Name" className={inputClass} required/><input name="email" value={formState.email || ''} onChange={handleFormChange} placeholder="Email" className={inputClass} required/><input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className={inputClass} required/><textarea name="address" value={formState.address || ''} onChange={handleFormChange} placeholder="Address" className={inputClass} required/><div><label className={labelClass}>First Purchase</label><input type="date" name="first_purchase_date" value={formState.first_purchase_date?.split('T')[0] || ''} onChange={handleFormChange} className={inputClass}/></div><button type="submit" className={buttonClass}>Save Customer</button></form>);
             case 'addAgent': case 'editAgent':
-                 return (<form onSubmit={handleSubmit} className="space-y-4"><input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Agent Name" className="p-2 border rounded w-full" required/><input type="email" name="email" value={formState.email || ''} onChange={handleFormChange} placeholder="Login Email" className="p-2 border rounded w-full" required/><input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className="p-2 border rounded w-full" required/>{modalType === 'addAgent' && <input type="password" name="password" value={formState.password || ''} onChange={handleFormChange} placeholder="Login Password" className="p-2 border rounded w-full" required/>}<textarea name="bank_details" value={formState.bank_details || ''} onChange={handleFormChange} placeholder="Bank Details (Account #, IFSC)" className="p-2 border rounded w-full"/><div><label className="text-sm">Joined Date</label><input type="date" name="join_date" value={formState.join_date?.split('T')[0] || ''} onChange={handleFormChange} className="p-2 border rounded w-full"/></div><div><label className="text-sm">Salary Status</label><select name="salary_status" value={formState.salary_status || 'Unpaid'} onChange={handleFormChange} className="p-2 border rounded w-full"><option>Unpaid</option><option>Paid</option></select></div><button type="submit" className="bg-orange-500 text-white w-full py-2 rounded">Save Agent</button></form>);
+                 return (<form onSubmit={handleSubmit} className="space-y-4"><input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Agent Name" className={inputClass} required/><input type="email" name="email" value={formState.email || ''} onChange={handleFormChange} placeholder="Login Email" className={inputClass} required/><input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className={inputClass} required/>{modalType === 'addAgent' && <input type="password" name="password" value={formState.password || ''} onChange={handleFormChange} placeholder="Login Password" className={inputClass} required/>}<textarea name="bank_details" value={formState.bank_details || ''} onChange={handleFormChange} placeholder="Bank Details (Account #, IFSC)" className={inputClass}/><div><label className={labelClass}>Joined Date</label><input type="date" name="join_date" value={formState.join_date?.split('T')[0] || ''} onChange={handleFormChange} className={inputClass}/></div><div><label className={labelClass}>Salary Status</label><select name="salary_status" value={formState.salary_status || 'Unpaid'} onChange={handleFormChange} className={inputClass}><option>Unpaid</option><option>Paid</option></select></div><button type="submit" className={buttonClass}>Save Agent</button></form>);
             case 'createDelivery': case 'editDelivery':
-                return (<form onSubmit={handleSubmit} className="space-y-4"><select name="customer_id" value={formState.customer_id || ''} onChange={handleFormChange} className="p-2 border rounded w-full" required><option value="">Select Customer</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><select name="agent_id" value={formState.agent_id || ''} onChange={handleFormChange} className="p-2 border rounded w-full"><option value="">Assign Later (Automatic)</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select><input type="date" name="delivery_date" value={formState.delivery_date?.split('T')[0] || ''} onChange={handleFormChange} className="p-2 border rounded w-full" required /><select name="item" value={formState.item || fruitBowlTypes[0]} onChange={handleFormChange} className="p-2 border rounded w-full">{fruitBowlTypes.map(b => <option key={b} value={b}>{b}</option>)}</select><select name="status" value={formState.status || 'Pending'} onChange={handleFormChange} className="p-2 border rounded w-full"><option>Pending</option><option>In Transit</option><option>Delivered</option><option>Cancelled</option></select><button type="submit" className="bg-green-500 text-white w-full py-2 rounded">Save Delivery</button></form>);
+                return (<form onSubmit={handleSubmit} className="space-y-4"><select name="customer_id" value={formState.customer_id || ''} onChange={handleFormChange} className={inputClass} required><option value="">Select Customer</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><select name="agent_id" value={formState.agent_id || ''} onChange={handleFormChange} className={inputClass}><option value="">Assign Later (Automatic)</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select><input type="date" name="delivery_date" value={formState.delivery_date?.split('T')[0] || ''} onChange={handleFormChange} className={inputClass} required /><select name="item" value={formState.item || fruitBowlTypes[0]} onChange={handleFormChange} className={inputClass}>{fruitBowlTypes.map(b => <option key={b} value={b}>{b}</option>)}</select><select name="status" value={formState.status || 'Pending'} onChange={handleFormChange} className={inputClass}><option>Pending</option><option>In Transit</option><option>Delivered</option><option>Cancelled</option></select><div className="flex items-center"><input type="checkbox" id="is_recurring" name="is_recurring" checked={!!formState.is_recurring} onChange={handleFormChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"/><label htmlFor="is_recurring" className="ml-2 block text-sm text-gray-900">Recurring Daily Delivery</label></div><button type="submit" className={buttonClass}>Save Delivery</button></form>);
             case 'addPayment': case 'editPayment':
-                return (<form onSubmit={handleSubmit} className="space-y-4"><select name="customer_id" value={formState.customer_id || ''} onChange={handleFormChange} className="p-2 border rounded w-full" required><option value="">Select Customer</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><input type="number" name="amount" value={formState.amount || ''} onChange={handleFormChange} placeholder="Amount" className="p-2 border rounded w-full" required/><div><label className="text-sm">Due Date</label><input type="date" name="due_date" value={formState.due_date?.split('T')[0] || ''} onChange={handleFormChange} className="p-2 border rounded w-full"/></div><select name="status" value={formState.status || 'Due'} onChange={handleFormChange} className="p-2 border rounded w-full"><option>Due</option><option>Paid</option><option>Overdue</option></select><button type="submit" className="bg-orange-500 text-white w-full py-2 rounded">Save Payment</button></form>);
+                return (<form onSubmit={handleSubmit} className="space-y-4"><select name="customer_id" value={formState.customer_id || ''} onChange={handleFormChange} className={inputClass} required><option value="">Select Customer</option>{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><input type="number" name="amount" value={formState.amount || ''} onChange={handleFormChange} placeholder="Amount" className={inputClass} required/><div><label className={labelClass}>Due Date</label><input type="date" name="due_date" value={formState.due_date?.split('T')[0] || ''} onChange={handleFormChange} className={inputClass}/></div><select name="status" value={formState.status || 'Due'} onChange={handleFormChange} className={inputClass}><option>Due</option><option>Paid</option><option>Overdue</option></select><button type="submit" className={buttonClass}>Save Payment</button></form>);
             default: return null;
         }
     };
   
     return (
-      <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
+      <div className="p-4 md:p-8 bg-slate-100 min-h-screen">
         {isModalOpen && <Modal title={modalType.includes('edit') ? 'Edit Details' : 'Add New'} onClose={() => setIsModalOpen(false)}>{renderModalContent()}</Modal>}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"><h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1><div><button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Logout</button></div></div>
-        <div className="flex gap-2 mb-6 flex-wrap"><TabButton label="Deliveries" isActive={activeTab === 'deliveries'} onClick={() => setActiveTab('deliveries')} /><TabButton label="Customers" isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} /><TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} /><TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} /><TabButton label="Support" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} /><TabButton label="Password Requests" isActive={activeTab === 'password_requests'} onClick={() => setActiveTab('password_requests')} /><TabButton label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} /></div>
-        <div className="bg-white shadow-md rounded-lg p-4 md:p-6"><div className="overflow-x-auto">{activeTab === 'deliveries' && (<><SearchBar onSearch={setSearchTerm} placeholder="Search by customer or agent..." /><button onClick={() => openModal('createDelivery')} className="bg-green-500 text-white py-2 px-4 rounded mb-4">+ Create Delivery</button><table className="min-w-full"><thead><tr><th className="text-left p-2">Customer</th><th className="text-left p-2">Agent</th><th className="text-left p-2">Date</th><th className="text-left p-2">Status</th><th className="text-left p-2">Actions</th></tr></thead><tbody>{filteredDeliveries.map(d => (<tr key={d.id} className="border-b"><td className="p-2">{d.customer?.name}</td><td className="p-2">{d.agent?.name || 'Unassigned'}</td><td className="p-2">{new Date(d.delivery_date).toLocaleDateString()}</td><td className="p-2"><StatusPill status={d.status} /></td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editDelivery', d)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeleteDelivery(d.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>)}{activeTab === 'customers' && (<><SearchBar onSearch={setSearchTerm} placeholder="Search by name or mobile..." /><button onClick={() => openModal('addCustomer')} className="bg-orange-500 text-white py-2 px-4 rounded mb-4">+ Add Customer</button><table className="min-w-full"><thead><tr><th className="text-left p-2">Name</th><th className="text-left p-2">Address</th><th className="text-left p-2">Email</th><th className="text-left p-2">Mobile</th><th className="text-left p-2">First Purchase</th><th className="text-left p-2">Actions</th></tr></thead><tbody>{filteredCustomers.map(c => (<tr key={c.id} className="border-b"><td className="p-2">{c.name}</td><td className="p-2">{c.address}</td><td className="p-2">{c.email}</td><td className="p-2">{c.mobile}</td><td className="p-2">{new Date(c.first_purchase_date).toLocaleDateString()}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editCustomer', c)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeleteCustomer(c.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>)}{activeTab === 'agents' && (<><SearchBar onSearch={setSearchTerm} placeholder="Search by name or email..." /><button onClick={() => openModal('addAgent')} className="bg-orange-500 text-white py-2 px-4 rounded mb-4">+ Add Agent</button><table className="min-w-full"><thead><tr><th className="text-left p-2">Name</th><th className="text-left p-2">Email</th><th className="text-left p-2">Mobile</th><th className="text-left p-2">Joined Date</th><th className="text-left p-2">Salary Status</th><th className="text-left p-2">Bank Details</th><th className="text-left p-2">Actions</th></tr></thead><tbody>{filteredAgents.map(a => (<tr key={a.id} className="border-b"><td className="p-2">{a.name}</td><td className="p-2">{a.email}</td><td className="p-2">{a.mobile}</td><td className="p-2">{new Date(a.join_date).toLocaleDateString()}</td><td className="p-2"><StatusPill status={a.salary_status} /></td><td className="p-2">{a.bank_details}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editAgent', a)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>)}{activeTab === 'payments' && (<><SearchBar onSearch={setSearchTerm} placeholder="Search by customer name..." /><button onClick={() => openModal('addPayment')} className="bg-orange-500 text-white py-2 px-4 rounded mb-4">+ Add Payment</button><table className="min-w-full"><thead><tr><th className="text-left p-2">Customer</th><th className="text-left p-2">Amount</th><th className="text-left p-2">Status</th><th className="text-left p-2">Due Date</th><th className="text-left p-2">Actions</th></tr></thead><tbody>{filteredPayments.map(p => (<tr key={p.id} className="border-b"><td className="p-2">{p.customer?.name}</td><td className="p-2">${p.amount}</td><td className="p-2"><StatusPill status={p.status} /></td><td className="p-2">{new Date(p.due_date).toLocaleDateString()}</td><td className="p-2 whitespace-nowrap"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 mr-2">Edit</button><button onClick={() => onDeletePayment(p.id)} className="text-red-600">Delete</button></td></tr>))}</tbody></table></>)}{activeTab === 'support' && (<><SearchBar onSearch={setSearchTerm} placeholder="Search by agent name..." /><table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Issue Type</th><th className="text-left p-2">Details</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th><th className="text-left p-2">Actions</th></tr></thead><tbody>{filteredSupportTickets.map(t => (<tr key={t.id} className="border-b"><td className="p-2">{t.agent?.name}</td><td className="p-2">{t.issueType}</td><td className="p-2">{t.details}</td><td className="p-2"><StatusPill status={t.status} /></td><td className="p-2">{new Date(t.createdAt).toLocaleString()}</td><td className="p-2">{t.status === 'Open' && <button onClick={() => onResolveTicket(t.id)} className="text-green-600 hover:underline">Resolve</button>}</td></tr>))}</tbody></table></>)}{activeTab === 'password_requests' && (<><SearchBar onSearch={setSearchTerm} placeholder="Search by agent name..." /><table className="min-w-full"><thead><tr><th className="text-left p-2">Agent</th><th className="text-left p-2">Status</th><th className="text-left p-2">Date</th><th className="text-left p-2">Actions</th></tr></thead><tbody>{filteredPasswordRequests.map(r => (<tr key={r.id} className="border-b"><td className="p-2">{r.agent?.name}</td><td className="p-2"><StatusPill status={r.status} /></td><td className="p-2">{new Date(r.createdAt).toLocaleString()}</td><td className="p-2">{r.status === 'Pending' && <button onClick={() => onApprovePassword(r.id)} className="text-green-600 hover:underline">Approve</button>}</td></tr>))}</tbody></table></>)}{activeTab === 'reports' && (<ReportsAndExport deliveries={deliveries} payments={payments} agents={agents} />)}</div></div>
+        <header className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div className="flex items-center gap-4">
+                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1751449299/freshontimelogo_qchfme.jpg" alt="FreshOnTime Logo" className="h-10 w-auto"/>
+                <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+            </div>
+            <div><button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors">Logout</button></div>
+        </header>
+        <div className="bg-white p-2 rounded-lg shadow-sm mb-6">
+            <div className="flex gap-1 flex-wrap">
+                <TabButton label="Deliveries" isActive={activeTab === 'deliveries'} onClick={() => setActiveTab('deliveries')} />
+                <TabButton label="Customers" isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
+                <TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
+                <TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
+                <TabButton label="Support" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} />
+                <TabButton label="Password Requests" isActive={activeTab === 'password_requests'} onClick={() => setActiveTab('password_requests')} />
+                <TabButton label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
+            </div>
+        </div>
+        <div className="bg-white shadow-lg rounded-xl p-4 md:p-6">
+            {activeTab !== 'reports' && (
+                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                    <SearchBar onSearch={setSearchTerm} placeholder="Search..." />
+                    {activeTab === 'deliveries' && <button onClick={() => openModal('createDelivery')} className="bg-green-500 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-green-600 transition-colors w-full md:w-auto">+ Create Delivery</button>}
+                    {activeTab === 'customers' && <button onClick={() => openModal('addCustomer')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Customer</button>}
+                    {activeTab === 'agents' && <button onClick={() => openModal('addAgent')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Agent</button>}
+                    {activeTab === 'payments' && <button onClick={() => openModal('addPayment')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Payment</button>}
+                </div>
+            )}
+            <div className="overflow-x-auto">
+                {activeTab === 'deliveries' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recurring</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredDeliveries.map(d => (<tr key={d.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{d.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.agent?.name || 'Unassigned'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(d.delivery_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={d.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.is_recurring ? 'Yes' : 'No'}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editDelivery', d)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteDelivery(d.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                {activeTab === 'customers' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Purchase</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredCustomers.map(c => (<tr key={c.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.address}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{c.email}</div><div>{c.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(c.first_purchase_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editCustomer', c)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteCustomer(c.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                {activeTab === 'agents' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredAgents.map(a => (<tr key={a.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{a.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{a.email}</div><div>{a.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(a.join_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={a.salary_status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editAgent', a)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                {activeTab === 'payments' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPayments.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.amount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={p.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(p.due_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeletePayment(p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                {activeTab === 'support' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredSupportTickets.map(t => (<tr key={t.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.issueType}</td><td className="px-6 py-4 text-sm text-gray-500">{t.details}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={t.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(t.createdAt).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{t.status === 'Open' && <button onClick={() => onResolveTicket(t.id)} className="text-green-600 hover:text-green-900">Resolve</button>}</td></tr>))}</tbody></table>)}
+                {activeTab === 'password_requests' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPasswordRequests.map(r => (<tr key={r.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{r.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={r.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(r.createdAt).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{r.status === 'Pending' && <button onClick={() => onApprovePassword(r.id)} className="text-green-600 hover:text-green-900">Approve</button>}</td></tr>))}</tbody></table>)}
+                {activeTab === 'reports' && (<ReportsAndExport deliveries={deliveries} payments={payments} agents={agents} />)}
+            </div>
+        </div>
       </div>
     );
 }

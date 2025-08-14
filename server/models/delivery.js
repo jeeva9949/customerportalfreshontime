@@ -1,9 +1,7 @@
-// ====================================================
-// --- File: server/models/delivery.js ---
-// ====================================================
 'use strict';
-const { Model } = require('sequelize');
-
+const {
+  Model
+} = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Delivery extends Model {
     static associate(models) {
@@ -12,11 +10,20 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Delivery.init({
-    customer_id: { type: DataTypes.INTEGER, allowNull: false },
+    customer_id: DataTypes.INTEGER,
     agent_id: DataTypes.INTEGER,
     delivery_date: DataTypes.DATE,
     status: DataTypes.STRING,
-    item: DataTypes.STRING
-  }, { sequelize, modelName: 'Delivery', tableName: 'deliveries' });
+    item: DataTypes.STRING,
+    // Add the new field here
+    is_recurring: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    }
+  }, {
+    sequelize,
+    modelName: 'Delivery',
+    tableName: 'deliveries'
+  });
   return Delivery;
 };
