@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import ReactDOM from 'react-dom'; // <-- FIX: Import ReactDOM for Portals
 import io from 'socket.io-client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { CSVLink } from 'react-csv';
+
+// Import your new components and hooks from their files
+import LiveAgentTrackerPage from './components/LiveAgentTracker';
+import { useLocationTracker } from './hooks/useLocationTracker';
 
 // --- Configuration ---
 const API_URL = 'http://localhost:5000/api';
@@ -23,34 +28,43 @@ const StatusPill = ({ status }) => {
     return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
 };
 
-const Modal = ({ title, children, onClose }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 transition-opacity duration-300">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg transform transition-all duration-300 scale-95 opacity-0 animate-scale-in">
-            <div className="flex justify-between items-center p-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl p-1 rounded-full hover:bg-gray-100">&times;</button>
+// --- FIX: Corrected Modal Component ---
+// This version uses a React Portal to render the modal at the top of the DOM,
+// ensuring it appears above all other content. The CSS has also been updated for
+// proper centering, layering (z-index), and visibility.
+const Modal = ({ title, children, onClose }) => {
+    // Use a portal to render the modal outside of the parent component's DOM tree
+    return ReactDOM.createPortal(
+        <>
+            {/* Backdrop with a lower z-index */}
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-40" onClick={onClose}></div>
+            {/* Modal content with a higher z-index, centered */}
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg p-4">
+                <div className="bg-white rounded-lg shadow-xl transform transition-all animate-scale-in">
+                    <div className="flex justify-between items-center p-4 border-b">
+                        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl p-1 rounded-full hover:bg-gray-100">&times;</button>
+                    </div>
+                    <div className="p-6">
+                        {children}
+                    </div>
+                </div>
             </div>
-            <div className="p-6">
-                {children}
-            </div>
-        </div>
-    </div>
-);
+        </>,
+        document.body // The modal will be appended to the body tag
+    );
+};
+
 
 const ConfirmModal = ({ title, message, onConfirm, onCancel }) => (
     <Modal title={title} onClose={onCancel}>
         <p className="mb-6 text-gray-600">{message}</p>
-        <div className="flex justify-end gap-4">
-            <button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
-            <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Confirm</button>
-        </div>
+        <div className="flex justify-end gap-4"><button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors">Cancel</button><button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Confirm</button></div>
     </Modal>
 );
 
 const TabButton = ({ label, isActive, onClick }) => (
-    <button onClick={onClick} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100'}`}>
-        {label}
-    </button>
+    <button onClick={onClick} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100'}`}>{label}</button>
 );
 
 const SearchBar = ({ onSearch, placeholder }) => (
@@ -62,7 +76,6 @@ const SearchBar = ({ onSearch, placeholder }) => (
 const ReportsAndExport = ({ deliveries, payments, agents }) => {
     const [reportType, setReportType] = useState('deliveries');
     const [filters, setFilters] = useState({ startDate: '', endDate: '', agentId: 'all', status: 'all' });
-    const [isLoading, setIsLoading] = useState(false);
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
@@ -70,13 +83,11 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
     };
 
     const filteredData = useMemo(() => {
-        setIsLoading(true);
         let data = reportType === 'deliveries' ? deliveries : payments;
         if (filters.startDate) data = data.filter(item => new Date(item.delivery_date || item.due_date) >= new Date(filters.startDate));
         if (filters.endDate) data = data.filter(item => new Date(item.delivery_date || item.due_date) <= new Date(filters.endDate));
         if (filters.agentId !== 'all') data = data.filter(item => item.agent_id === parseInt(filters.agentId));
         if (filters.status !== 'all') data = data.filter(item => item.status === filters.status);
-        setTimeout(() => setIsLoading(false), 300);
         return data;
     }, [reportType, deliveries, payments, filters]);
 
@@ -133,7 +144,7 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
                 </div>
 
                 <div className="overflow-x-auto bg-white rounded-lg shadow">
-                    {isLoading ? ( <div className="text-center py-10">Loading...</div> ) : filteredData.length > 0 ? (
+                    {filteredData.length > 0 ? (
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>{reportType === 'payments' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>}</tr></thead>
                             <tbody className="bg-white divide-y divide-gray-200">{filteredData.map(item => (<tr key={item.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.customer?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.agent?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={item.status} /></td>{reportType === 'payments' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.amount}</td>}</tr>))}</tbody>
@@ -300,37 +311,46 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
                 <TabButton label="Customers" isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
                 <TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
                 <TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => setActiveTab('payments')} />
+                <TabButton label="Live Map" isActive={activeTab === 'live_map'} onClick={() => setActiveTab('live_map')} />
                 <TabButton label="Support" isActive={activeTab === 'support'} onClick={() => setActiveTab('support')} />
                 <TabButton label="Password Requests" isActive={activeTab === 'password_requests'} onClick={() => setActiveTab('password_requests')} />
                 <TabButton label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
             </div>
         </div>
-        <div className="bg-white shadow-lg rounded-xl p-4 md:p-6">
-            {activeTab !== 'reports' && (
-                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <SearchBar onSearch={setSearchTerm} placeholder="Search..." />
-                    {activeTab === 'deliveries' && <button onClick={() => openModal('createDelivery')} className="bg-green-500 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-green-600 transition-colors w-full md:w-auto">+ Create Delivery</button>}
-                    {activeTab === 'customers' && <button onClick={() => openModal('addCustomer')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Customer</button>}
-                    {activeTab === 'agents' && <button onClick={() => openModal('addAgent')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Agent</button>}
-                    {activeTab === 'payments' && <button onClick={() => openModal('addPayment')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Payment</button>}
-                </div>
-            )}
-            <div className="overflow-x-auto">
-                {activeTab === 'deliveries' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recurring</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredDeliveries.map(d => (<tr key={d.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{d.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.agent?.name || 'Unassigned'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(d.delivery_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={d.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.is_recurring ? 'Yes' : 'No'}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editDelivery', d)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteDelivery(d.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
-                {activeTab === 'customers' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Purchase</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredCustomers.map(c => (<tr key={c.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.address}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{c.email}</div><div>{c.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(c.first_purchase_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editCustomer', c)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteCustomer(c.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
-                {activeTab === 'agents' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredAgents.map(a => (<tr key={a.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{a.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{a.email}</div><div>{a.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(a.join_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={a.salary_status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editAgent', a)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
-                {activeTab === 'payments' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPayments.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.amount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={p.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(p.due_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeletePayment(p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
-                {activeTab === 'support' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredSupportTickets.map(t => (<tr key={t.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.issueType}</td><td className="px-6 py-4 text-sm text-gray-500">{t.details}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={t.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(t.createdAt).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{t.status === 'Open' && <button onClick={() => onResolveTicket(t.id)} className="text-green-600 hover:text-green-900">Resolve</button>}</td></tr>))}</tbody></table>)}
-                {activeTab === 'password_requests' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPasswordRequests.map(r => (<tr key={r.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{r.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={r.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(r.createdAt).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{r.status === 'Pending' && <button onClick={() => onApprovePassword(r.id)} className="text-green-600 hover:text-green-900">Approve</button>}</td></tr>))}</tbody></table>)}
-                {activeTab === 'reports' && (<ReportsAndExport deliveries={deliveries} payments={payments} agents={agents} />)}
+        
+        {activeTab === 'live_map' ? (
+            <div className="h-[70vh] bg-white shadow-lg rounded-xl overflow-hidden">
+                 <LiveAgentTrackerPage />
             </div>
-        </div>
+        ) : (
+            <div className="bg-white shadow-lg rounded-xl p-4 md:p-6">
+                {activeTab !== 'reports' && (
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                        <SearchBar onSearch={setSearchTerm} placeholder="Search..." />
+                        {activeTab === 'deliveries' && <button onClick={() => openModal('createDelivery')} className="bg-green-500 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-green-600 transition-colors w-full md:w-auto">+ Create Delivery</button>}
+                        {activeTab === 'customers' && <button onClick={() => openModal('addCustomer')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Customer</button>}
+                        {activeTab === 'agents' && <button onClick={() => openModal('addAgent')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Agent</button>}
+                        {activeTab === 'payments' && <button onClick={() => openModal('addPayment')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Payment</button>}
+                    </div>
+                )}
+                <div className="overflow-x-auto">
+                    {activeTab === 'deliveries' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recurring</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredDeliveries.map(d => (<tr key={d.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{d.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.agent?.name || 'Unassigned'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(d.delivery_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={d.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.is_recurring ? 'Yes' : 'No'}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editDelivery', d)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteDelivery(d.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                    {activeTab === 'customers' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Purchase</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredCustomers.map(c => (<tr key={c.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.address}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{c.email}</div><div>{c.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(c.first_purchase_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editCustomer', c)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteCustomer(c.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                    {activeTab === 'agents' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredAgents.map(a => (<tr key={a.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{a.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{a.email}</div><div>{a.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(a.join_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={a.salary_status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editAgent', a)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                    {activeTab === 'payments' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPayments.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.amount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={p.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(p.due_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeletePayment(p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                    {activeTab === 'support' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredSupportTickets.map(t => (<tr key={t.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.issueType}</td><td className="px-6 py-4 text-sm text-gray-500">{t.details}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={t.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(t.createdAt).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{t.status === 'Open' && <button onClick={() => onResolveTicket(t.id)} className="text-green-600 hover:text-green-900">Resolve</button>}</td></tr>))}</tbody></table>)}
+                    {activeTab === 'password_requests' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPasswordRequests.map(r => (<tr key={r.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{r.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={r.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(r.createdAt).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{r.status === 'Pending' && <button onClick={() => onApprovePassword(r.id)} className="text-green-600 hover:text-green-900">Approve</button>}</td></tr>))}</tbody></table>)}
+                    {activeTab === 'reports' && (<ReportsAndExport deliveries={deliveries} payments={payments} agents={agents} />)}
+                </div>
+            </div>
+        )}
       </div>
     );
 }
 
 // --- Agent Portal Component ---
 function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, onUpdateDelivery, onReportIssue, onRequestPasswordChange, onUpdateNotificationPreference }) {
+    const { isTracking, error: trackingError } = useLocationTracker(agent);
     const [activeTab, setActiveTab] = useState('deliveries');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDelivery, setSelectedDelivery] = useState(null);
@@ -339,9 +359,9 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
     const [issueDetails, setIssueDetails] = useState('');
     
     const agentDetails = useMemo(() => allAgents.find(a => a.id === agent.id) || agent, [agent, allAgents]);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(agentDetails.notifications_enabled);
-
-    useEffect(() => { setNotificationsEnabled(agentDetails.notifications_enabled); }, [agentDetails]);
+    
+    // FIX: Directly derive the value from props to prevent loops.
+    const notificationsEnabled = agentDetails.notifications_enabled;
 
     const agentDeliveries = useMemo(() => allDeliveries.filter(d => d.agent_id === agent.id), [allDeliveries, agent.id]);
     const todaysDeliveries = useMemo(() => {
@@ -360,11 +380,16 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
     const handleStatusUpdate = (newStatus) => { if (selectedDelivery) { onUpdateDelivery({ ...selectedDelivery, status: newStatus }); } setIsModalOpen(false); };
     const handleReportSubmit = (e) => { e.preventDefault(); onReportIssue({ issueType, details: issueDetails }); setIssueDetails(''); alert('Support ticket submitted successfully!'); };
     const handleSaveChanges = () => { if (newPassword) { if (newPassword.length < 6) { alert("Password must be at least 6 characters long."); return; } onRequestPasswordChange(newPassword); setNewPassword(''); alert('Password change requested. An admin will approve it shortly.'); }};
-    const handleNotificationToggle = () => { const newPreference = !notificationsEnabled; setNotificationsEnabled(newPreference); onUpdateNotificationPreference(newPreference); };
+    
+    // FIX: This handler now correctly calls the parent function without local state.
+    const handleNotificationToggle = () => { 
+        const newPreference = !notificationsEnabled; 
+        onUpdateNotificationPreference(newPreference); 
+    };
     const handleNavigate = (address) => { if (!address) { alert("Address not available."); return; } window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, '_blank'); };
 
     const BottomNavLink = ({ page, label, icon }) => (<button onClick={() => setActiveTab(page)} className={`flex flex-col items-center justify-center w-full transition-colors py-1 ${activeTab === page ? 'text-orange-400' : 'text-gray-400 hover:text-orange-400'}`}><span className="text-2xl">{icon}</span><span className="text-xs font-medium">{label}</span></button>);
-    const PageHeader = () => { let title = 'Deliveries'; if (activeTab === 'history') title = 'History'; if (activeTab === 'profile') title = 'Profile'; if (activeTab === 'support') title = 'Support'; return (<header className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-4"><div className="flex justify-between items-center"><h1 className="text-xl font-bold text-orange-400">{title}</h1><button className="p-2 rounded-full text-gray-400 hover:bg-slate-800"><span className="text-xl">⚙️</span></button></div></header>); };
+    const PageHeader = () => { let title = 'Deliveries'; if (activeTab === 'history') title = 'History'; if (activeTab === 'profile') title = 'Profile'; if (activeTab === 'support') title = 'Support'; return (<header className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-4"><div className="flex justify-between items-center"><div className="flex items-center gap-4"><img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1751449299/freshontimelogo_qchfme.jpg" alt="Logo" className="h-8 w-auto rounded-md"/><h1 className="text-xl font-bold text-orange-400">{title}</h1></div><div className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${isTracking ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}><span className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>{isTracking ? 'Tracking Live' : 'Tracking Off'}</div></div>{trackingError && <p className="text-xs text-red-400 text-center mt-2">{trackingError}</p>}</header>); };
 
     const renderPageContent = () => {
         switch(activeTab) {
@@ -420,15 +445,25 @@ export default function App() {
                 fetch(`${API_URL}/support`, { headers: authHeader }),
                 fetch(`${API_URL}/password-requests`, { headers: authHeader })
             ]);
-            if (!customersRes.ok || !agentsRes.ok || !deliveriesRes.ok || !paymentsRes.ok || !supportRes.ok || !passwordRes.ok) {
-                throw new Error("Failed to fetch initial data. Your session may have expired.");
-            }
-            setCustomers(await customersRes.json());
-            setAgents(await agentsRes.json());
-            setDeliveries(await deliveriesRes.json());
-            setPayments(await paymentsRes.json());
-            setSupportTickets(await supportRes.json());
-            setPasswordRequests(await passwordRes.json());
+            
+            const checkResponse = async (res, setter) => {
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        setter(data);
+                    }
+                } else {
+                    console.error(`Failed to fetch ${setter.name}`);
+                }
+            };
+            
+            await checkResponse(customersRes, setCustomers);
+            await checkResponse(agentsRes, setAgents);
+            await checkResponse(deliveriesRes, setDeliveries);
+            await checkResponse(paymentsRes, setPayments);
+            await checkResponse(supportRes, setSupportTickets);
+            await checkResponse(passwordRes, setPasswordRequests);
+
         } catch (error) {
             console.error("Fetch data error:", error);
             handleLogout();
@@ -507,7 +542,8 @@ export default function App() {
         setToken(newToken);
     };
 
-    const apiRequest = async (endpoint, method, body = null) => {
+    // --- FIX: Stabilize all handler functions with useCallback to prevent re-renders ---
+    const apiRequest = useCallback(async (endpoint, method, body = null) => {
         try {
             const authHeader = { 'Authorization': `Bearer ${token}` };
             const options = { method, headers: { ...authHeader, 'Content-Type': 'application/json' } };
@@ -518,29 +554,46 @@ export default function App() {
             console.error(`API request to ${endpoint} failed:`, error);
             alert(`Error: ${error.message}`);
         }
-    };
+    }, [token]);
   
-    const requestConfirmation = (title, message, onConfirm) => setConfirmState({ isOpen: true, title, message, onConfirm });
-    const handleConfirm = () => { if (confirmState.onConfirm) { confirmState.onConfirm(); } setConfirmState({ isOpen: false }); };
-    const handleCancelConfirm = () => setConfirmState({ isOpen: false });
+    const requestConfirmation = useCallback((title, message, onConfirm) => {
+        setConfirmState({ isOpen: true, title, message, onConfirm });
+    }, []);
 
-    const handleAddCustomer = (customer) => apiRequest('/customers', 'POST', customer);
-    const handleUpdateCustomer = (customer) => apiRequest(`/customers/${customer.id}`, 'PUT', customer);
-    const handleDeleteCustomer = (id) => requestConfirmation('Delete Customer?', 'Are you sure?', () => apiRequest(`/customers/${id}`, 'DELETE'));
-    const handleAddAgent = (agent) => apiRequest('/agents', 'POST', agent);
-    const handleUpdateAgent = (agent) => apiRequest(`/agents/${agent.id}`, 'PUT', agent);
-    const handleDeleteAgent = (id) => requestConfirmation('Delete Agent?', 'Are you sure?', () => apiRequest(`/agents/${id}`, 'DELETE'));
-    const handleCreateDelivery = (delivery) => apiRequest('/deliveries', 'POST', delivery);
-    const handleUpdateDelivery = (delivery) => apiRequest(`/deliveries/${delivery.id}`, 'PUT', delivery);
-    const handleDeleteDelivery = (id) => requestConfirmation('Delete Delivery?', 'Are you sure?', () => apiRequest(`/deliveries/${id}`, 'DELETE'));
-    const handleAddPayment = (payment) => apiRequest('/payments', 'POST', payment);
-    const handleUpdatePayment = (payment) => apiRequest(`/payments/${payment.id}`, 'PUT', payment);
-    const handleDeletePayment = (id) => requestConfirmation('Delete Payment?', 'Are you sure?', () => apiRequest(`/payments/${id}`, 'DELETE'));
-    const handleReportIssue = (issue) => apiRequest('/support', 'POST', issue);
-    const handleResolveTicket = (ticketId) => apiRequest(`/support/${ticketId}`, 'PUT', { status: 'Resolved' });
-    const handleRequestPasswordChange = (newPassword) => apiRequest('/password-requests', 'POST', { newPassword });
-    const handleApprovePassword = (requestId) => apiRequest(`/password-requests/${requestId}/approve`, 'PUT');
-    const handleUpdateNotificationPreference = (preference) => apiRequest('/agents/notifications', 'PUT', { notifications_enabled: preference });
+    // FIX: Added the missing 'confirmState' dependency to the array.
+    const handleConfirm = useCallback(() => {
+        if (confirmState.onConfirm) {
+            confirmState.onConfirm();
+        }
+        setConfirmState({ isOpen: false });
+    }, [confirmState]);
+
+    const handleCancelConfirm = useCallback(() => {
+        setConfirmState({ isOpen: false });
+    }, []);
+
+    const handleAddCustomer = useCallback((customer) => apiRequest('/customers', 'POST', customer), [apiRequest]);
+    const handleUpdateCustomer = useCallback((customer) => apiRequest(`/customers/${customer.id}`, 'PUT', customer), [apiRequest]);
+    const handleDeleteCustomer = useCallback((id) => requestConfirmation('Delete Customer?', 'Are you sure?', () => apiRequest(`/customers/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
+    
+    const handleAddAgent = useCallback((agent) => apiRequest('/agents', 'POST', agent), [apiRequest]);
+    const handleUpdateAgent = useCallback((agent) => apiRequest(`/agents/${agent.id}`, 'PUT', agent), [apiRequest]);
+    const handleDeleteAgent = useCallback((id) => requestConfirmation('Delete Agent?', 'Are you sure?', () => apiRequest(`/agents/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
+    
+    const handleCreateDelivery = useCallback((delivery) => apiRequest('/deliveries', 'POST', delivery), [apiRequest]);
+    const handleUpdateDelivery = useCallback((delivery) => apiRequest(`/deliveries/${delivery.id}`, 'PUT', delivery), [apiRequest]);
+    const handleDeleteDelivery = useCallback((id) => requestConfirmation('Delete Delivery?', 'Are you sure?', () => apiRequest(`/deliveries/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
+    
+    const handleAddPayment = useCallback((payment) => apiRequest('/payments', 'POST', payment), [apiRequest]);
+    const handleUpdatePayment = useCallback((payment) => apiRequest(`/payments/${payment.id}`, 'PUT', payment), [apiRequest]);
+    const handleDeletePayment = useCallback((id) => requestConfirmation('Delete Payment?', 'Are you sure?', () => apiRequest(`/payments/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
+    
+    const handleReportIssue = useCallback((issue) => apiRequest('/support', 'POST', issue), [apiRequest]);
+    const handleResolveTicket = useCallback((ticketId) => apiRequest(`/support/${ticketId}`, 'PUT', { status: 'Resolved' }), [apiRequest]);
+    
+    const handleRequestPasswordChange = useCallback((newPassword) => apiRequest('/password-requests', 'POST', { newPassword }), [apiRequest]);
+    const handleApprovePassword = useCallback((requestId) => apiRequest(`/password-requests/${requestId}/approve`, 'PUT'), [apiRequest]);
+    const handleUpdateNotificationPreference = useCallback((preference) => apiRequest('/agents/notifications', 'PUT', { notifications_enabled: preference }), [apiRequest]);
 
     const renderPage = () => {
         switch (page) {

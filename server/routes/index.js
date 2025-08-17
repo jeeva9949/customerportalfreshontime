@@ -1,5 +1,3 @@
-// --- File: server/routes/index.js (UPDATED) ---
-// ====================================================
 const express = require('express');
 const masterRouter = express.Router();
 
@@ -10,7 +8,8 @@ const customerRoutes = require('./customerRoutes');
 const deliveryRoutes = require('./deliveryRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const supportRoutes = require('./supportRoutes');
-const passwordRoutes = require('./passwordRoutes'); // New
+const passwordRoutes = require('./passwordRoutes');
+const locationRoutes = require('./locationRoutes'); // New
 
 // Use the routers with their base paths
 masterRouter.use('/auth', authRoutes);
@@ -19,6 +18,7 @@ masterRouter.use('/customers', customerRoutes);
 masterRouter.use('/deliveries', deliveryRoutes);
 masterRouter.use('/payments', paymentRoutes);
 masterRouter.use('/support', supportRoutes);
-masterRouter.use('/password-requests', passwordRoutes); // New
+masterRouter.use('/password-requests', passwordRoutes);
+masterRouter.use('/locations', locationRoutes); // New
 
 module.exports = masterRouter;

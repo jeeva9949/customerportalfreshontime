@@ -46,7 +46,6 @@ app.get('/', (req, res) => {
 });
 
 // --- Automated Daily Tasks ---
-// NEW: Cron job for creating recurring deliveries for the current day
 cron.schedule('0 0 * * *', async () => {
     console.log('Running daily task: Creating recurring deliveries for today...');
     try {
@@ -55,7 +54,6 @@ cron.schedule('0 0 * * *', async () => {
         const startOfYesterday = new Date(yesterday.setHours(0, 0, 0, 0));
         const endOfYesterday = new Date(yesterday.setHours(23, 59, 59, 999));
 
-        // Find all successful recurring deliveries from yesterday
         const successfulRecurringDeliveries = await db.Delivery.findAll({
             where: {
                 is_recurring: true,
@@ -73,16 +71,15 @@ cron.schedule('0 0 * * *', async () => {
 
         const newDeliveries = [];
         for (const delivery of successfulRecurringDeliveries) {
-            // IMPORTANT: Check if the customer still exists before creating a new delivery
             const customer = await db.Customer.findByPk(delivery.customer_id);
             if (customer) {
                 newDeliveries.push({
                     customer_id: delivery.customer_id,
                     agent_id: delivery.agent_id,
                     item: delivery.item,
-                    delivery_date: new Date(), // Set to today
+                    delivery_date: new Date(),
                     status: 'Pending',
-                    is_recurring: true // Keep it recurring
+                    is_recurring: true
                 });
             } else {
                 console.log(`Customer with ID ${delivery.customer_id} has been deleted. Stopping recurring delivery.`);
@@ -92,7 +89,7 @@ cron.schedule('0 0 * * *', async () => {
         if (newDeliveries.length > 0) {
             await db.Delivery.bulkCreate(newDeliveries);
             console.log(`Successfully created ${newDeliveries.length} new recurring deliveries for today.`);
-            getIO().emit('deliveries_updated'); // Notify clients
+            getIO().emit('deliveries_updated');
         }
 
     } catch (error) {
@@ -100,8 +97,6 @@ cron.schedule('0 0 * * *', async () => {
     }
 }, { scheduled: true, timezone: "Asia/Kolkata" });
 
-
-// Cron job for assigning any unassigned deliveries for today
 let lastAssignedAgentIndex = 0;
 cron.schedule('0 1 * * *', async () => {
     console.log('Running daily task: Assigning unassigned deliveries...');
@@ -142,7 +137,6 @@ cron.schedule('0 1 * * *', async () => {
         console.error('Error running the daily delivery assignment task:', error);
     }
 }, { scheduled: true, timezone: "Asia/Kolkata" });
-
 
 const startServer = async () => {
     try {
