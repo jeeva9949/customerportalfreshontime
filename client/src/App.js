@@ -8,7 +8,8 @@ import { CSVLink } from 'react-csv';
 
 // Import your components and hooks
 import LiveAgentTrackerPage from './components/LiveAgentTracker';
-import DashboardOverview from './components/Dashboard'; // <-- CORRECT: Importing your separate dashboard component
+import DashboardOverview from './components/Dashboard';
+import CustomerManagement from './components/CustomerManagement';
 import { useLocationTracker } from './hooks/useLocationTracker';
 
 // --- Configuration ---
@@ -221,7 +222,8 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
     const [formState, setFormState] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
   
-    const openModal = (type, item = null) => {
+    // FIX: Stabilize the openModal function to prevent re-renders
+    const openModal = useCallback((type, item = null) => {
         setModalType(type);
         if (item) { 
             setFormState(item);
@@ -235,7 +237,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
             setFormState(defaultState[type]);
         }
         setIsModalOpen(true);
-    };
+    }, []); // Empty dependency array means this function is created only once.
   
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -261,8 +263,11 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         setIsModalOpen(false);
     };
 
+    // FIX: Create stable versions of the handlers to pass down as props
+    const handleAddCustomerClick = useCallback(() => openModal('addCustomer'), [openModal]);
+    const handleUpdateCustomerClick = useCallback((customer) => openModal('editCustomer', customer), [openModal]);
+
     const filteredDeliveries = useMemo(() => deliveries.filter(d => (d.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (d.agent?.name || '').toLowerCase().includes(searchTerm.toLowerCase())), [deliveries, searchTerm]);
-    const filteredCustomers = useMemo(() => customers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.mobile.includes(searchTerm)), [customers, searchTerm]);
     const filteredAgents = useMemo(() => agents.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.email.toLowerCase().includes(searchTerm.toLowerCase())), [agents, searchTerm]);
     const filteredPayments = useMemo(() => payments.filter(p => (p.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())), [payments, searchTerm]);
     const filteredSupportTickets = useMemo(() => supportTickets.filter(t => (t.agent?.name || '').toLowerCase().includes(searchTerm.toLowerCase())), [supportTickets, searchTerm]);
@@ -313,25 +318,25 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         </div>
         
         {activeTab === 'dashboard' && <DashboardOverview deliveries={deliveries} payments={payments} agents={agents} customers={customers} />}
+        {activeTab === 'customers' && <CustomerManagement customers={customers} deliveries={deliveries} payments={payments} onUpdateCustomer={handleUpdateCustomerClick} onDeleteCustomer={onDeleteCustomer} onAddCustomer={handleAddCustomerClick} />}
+
         {activeTab === 'live_map' && (
             <div className="h-[70vh] bg-white shadow-lg rounded-xl overflow-hidden">
                  <LiveAgentTrackerPage />
             </div>
         )}
-        {activeTab !== 'dashboard' && activeTab !== 'live_map' && (
+        {activeTab !== 'dashboard' && activeTab !== 'live_map' && activeTab !== 'customers' && (
             <div className="bg-white shadow-lg rounded-xl p-4 md:p-6">
                 {activeTab !== 'reports' && (
                     <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                         <SearchBar onSearch={setSearchTerm} placeholder="Search..." />
                         {activeTab === 'deliveries' && <button onClick={() => openModal('createDelivery')} className="bg-green-500 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-green-600 transition-colors w-full md:w-auto">+ Create Delivery</button>}
-                        {activeTab === 'customers' && <button onClick={() => openModal('addCustomer')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Customer</button>}
                         {activeTab === 'agents' && <button onClick={() => openModal('addAgent')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Agent</button>}
                         {activeTab === 'payments' && <button onClick={() => openModal('addPayment')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Payment</button>}
                     </div>
                 )}
                 <div className="overflow-x-auto">
                     {activeTab === 'deliveries' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recurring</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredDeliveries.map(d => (<tr key={d.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{d.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.agent?.name || 'Unassigned'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(d.delivery_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={d.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.is_recurring ? 'Yes' : 'No'}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editDelivery', d)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteDelivery(d.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
-                    {activeTab === 'customers' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Purchase</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredCustomers.map(c => (<tr key={c.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.address}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{c.email}</div><div>{c.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(c.first_purchase_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editCustomer', c)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteCustomer(c.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
                     {activeTab === 'agents' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredAgents.map(a => (<tr key={a.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{a.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{a.email}</div><div>{a.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(a.join_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={a.salary_status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editAgent', a)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
                     {activeTab === 'payments' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPayments.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.amount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={p.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(p.due_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeletePayment(p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
                     {activeTab === 'support' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredSupportTickets.map(t => (<tr key={t.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{t.issueType}</td><td className="px-6 py-4 text-sm text-gray-500">{t.details}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={t.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(t.createdAt).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{t.status === 'Open' && <button onClick={() => onResolveTicket(t.id)} className="text-green-600 hover:text-green-900">Resolve</button>}</td></tr>))}</tbody></table>)}
