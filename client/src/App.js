@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import ReactDOM from 'react-dom'; // <-- FIX: Import ReactDOM for Portals
+import ReactDOM from 'react-dom';
 import io from 'socket.io-client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { CSVLink } from 'react-csv';
 
-// Import your new components and hooks from their files
+// Import your components and hooks
 import LiveAgentTrackerPage from './components/LiveAgentTracker';
+import DashboardOverview from './components/Dashboard'; // <-- CORRECT: Importing your separate dashboard component
 import { useLocationTracker } from './hooks/useLocationTracker';
 
 // --- Configuration ---
@@ -28,17 +29,10 @@ const StatusPill = ({ status }) => {
     return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
 };
 
-// --- FIX: Corrected Modal Component ---
-// This version uses a React Portal to render the modal at the top of the DOM,
-// ensuring it appears above all other content. The CSS has also been updated for
-// proper centering, layering (z-index), and visibility.
 const Modal = ({ title, children, onClose }) => {
-    // Use a portal to render the modal outside of the parent component's DOM tree
     return ReactDOM.createPortal(
         <>
-            {/* Backdrop with a lower z-index */}
             <div className="fixed inset-0 bg-black bg-opacity-60 z-40" onClick={onClose}></div>
-            {/* Modal content with a higher z-index, centered */}
             <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg p-4">
                 <div className="bg-white rounded-lg shadow-xl transform transition-all animate-scale-in">
                     <div className="flex justify-between items-center p-4 border-b">
@@ -51,7 +45,7 @@ const Modal = ({ title, children, onClose }) => {
                 </div>
             </div>
         </>,
-        document.body // The modal will be appended to the body tag
+        document.body
     );
 };
 
@@ -70,7 +64,6 @@ const TabButton = ({ label, isActive, onClick }) => (
 const SearchBar = ({ onSearch, placeholder }) => (
     <input type="text" onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="p-2 border border-gray-300 rounded-lg w-full md:w-auto flex-grow bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
 );
-
 
 // --- Reports & Export Component ---
 const ReportsAndExport = ({ deliveries, payments, agents }) => {
@@ -222,7 +215,7 @@ function AuthPage({ onLogin, onRegister }) {
 
 // --- Admin Dashboard Component ---
 function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, passwordRequests, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket, onApprovePassword }) {
-    const [activeTab, setActiveTab] = useState('deliveries');
+    const [activeTab, setActiveTab] = useState('dashboard');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState('');
     const [formState, setFormState] = useState({});
@@ -307,6 +300,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         </header>
         <div className="bg-white p-2 rounded-lg shadow-sm mb-6">
             <div className="flex gap-1 flex-wrap">
+                <TabButton label="Dashboard" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
                 <TabButton label="Deliveries" isActive={activeTab === 'deliveries'} onClick={() => setActiveTab('deliveries')} />
                 <TabButton label="Customers" isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
                 <TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
@@ -318,11 +312,13 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
             </div>
         </div>
         
-        {activeTab === 'live_map' ? (
+        {activeTab === 'dashboard' && <DashboardOverview deliveries={deliveries} payments={payments} agents={agents} customers={customers} />}
+        {activeTab === 'live_map' && (
             <div className="h-[70vh] bg-white shadow-lg rounded-xl overflow-hidden">
                  <LiveAgentTrackerPage />
             </div>
-        ) : (
+        )}
+        {activeTab !== 'dashboard' && activeTab !== 'live_map' && (
             <div className="bg-white shadow-lg rounded-xl p-4 md:p-6">
                 {activeTab !== 'reports' && (
                     <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
@@ -360,7 +356,6 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
     
     const agentDetails = useMemo(() => allAgents.find(a => a.id === agent.id) || agent, [agent, allAgents]);
     
-    // FIX: Directly derive the value from props to prevent loops.
     const notificationsEnabled = agentDetails.notifications_enabled;
 
     const agentDeliveries = useMemo(() => allDeliveries.filter(d => d.agent_id === agent.id), [allDeliveries, agent.id]);
@@ -381,7 +376,6 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
     const handleReportSubmit = (e) => { e.preventDefault(); onReportIssue({ issueType, details: issueDetails }); setIssueDetails(''); alert('Support ticket submitted successfully!'); };
     const handleSaveChanges = () => { if (newPassword) { if (newPassword.length < 6) { alert("Password must be at least 6 characters long."); return; } onRequestPasswordChange(newPassword); setNewPassword(''); alert('Password change requested. An admin will approve it shortly.'); }};
     
-    // FIX: This handler now correctly calls the parent function without local state.
     const handleNotificationToggle = () => { 
         const newPreference = !notificationsEnabled; 
         onUpdateNotificationPreference(newPreference); 
@@ -542,7 +536,6 @@ export default function App() {
         setToken(newToken);
     };
 
-    // --- FIX: Stabilize all handler functions with useCallback to prevent re-renders ---
     const apiRequest = useCallback(async (endpoint, method, body = null) => {
         try {
             const authHeader = { 'Authorization': `Bearer ${token}` };
@@ -560,7 +553,6 @@ export default function App() {
         setConfirmState({ isOpen: true, title, message, onConfirm });
     }, []);
 
-    // FIX: Added the missing 'confirmState' dependency to the array.
     const handleConfirm = useCallback(() => {
         if (confirmState.onConfirm) {
             confirmState.onConfirm();
