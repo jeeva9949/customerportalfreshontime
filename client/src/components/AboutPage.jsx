@@ -1,20 +1,20 @@
 import React from 'react';
 
 // A reusable header for the top of the page
-const PageHeader = ({ onBack }) => (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-4">
-            <div className="flex items-center space-x-2">
-                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="FreshOnTime Logo" className="h-10 w-auto" />
-                <span className="text-2xl font-bold text-gray-900">FreshOnTime</span>
-            </div>
-            <button onClick={onBack} className="text-gray-600 hover:text-green-600 font-semibold flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                Back to Home
-            </button>
-        </div>
-    </header>
-);
+// const PageHeader = ({ onBack }) => (
+//     <header className="bg-white shadow-sm sticky top-0 z-50">
+//         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-4">
+//             <div className="flex items-center space-x-2">
+//                 <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="FreshOnTime Logo" className="h-10 w-auto" />
+//                 <span className="text-2xl font-bold text-gray-900">FreshOnTime</span>
+//             </div>
+//             <button onClick={onBack} className="text-gray-600 hover:text-green-600 font-semibold flex items-center gap-2">
+//                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+//                 Back to Home
+//             </button>
+//         </div>
+//     </header>
+// );
 
 // The main About Page component
 export default function AboutPage({ onBack }) {
@@ -32,14 +32,14 @@ export default function AboutPage({ onBack }) {
     ];
 
     const stats = [
-        { value: '50+', label: 'Happy Customers' },
+        { value: '150+', label: 'Happy Customers' },
         { value: '100%', label: 'Fresh Guarantee' },
         { value: '6', label: 'Unique Bowl Options' },
     ];
 
     return (
         <div className="bg-gray-50">
-            <PageHeader onBack={onBack} />
+            {/* <PageHeader onBack={onBack} /> */}
             <main className="py-12 sm:py-16">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Top Section */}
