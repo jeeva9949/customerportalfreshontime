@@ -11,7 +11,9 @@ import LiveAgentTrackerPage from './components/LiveAgentTracker';
 import DashboardOverview from './components/Dashboard';
 import CustomerManagement from './components/CustomerManagement';
 import { useLocationTracker } from './hooks/useLocationTracker';
-import CustomerPortal from './components/CustomerPortal';
+// --- UPDATED IMPORTS ---
+import LandingPage from './components/LandingPage';
+import CustomerDashboard from './components/CustomerDashboard';
 
 // --- Configuration ---
 const API_URL = 'http://localhost:5000/api';
@@ -119,17 +121,16 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
 };
 
 
-// --- Authentication Page Component (UPDATED) ---
+// --- Authentication Page Component ---
 function AuthPage({ onAdminAgentLogin, onAdminRegister, onCustomerAuth, onBack, initialUserType = 'customer' }) {
     const [isLogin, setIsLogin] = useState(true);
     const [userType, setUserType] = useState(initialUserType);
     const [formData, setFormData] = useState({ name: '', email: '', password: '', mobile: '', adminCode: '' });
     const [error, setError] = useState('');
 
-    // This effect ensures the form correctly resets when navigating from footer links
     useEffect(() => {
         setUserType(initialUserType);
-        setIsLogin(true); // Always default to login when switching types
+        setIsLogin(true);
         setError('');
         setFormData({ name: '', email: '', password: '', mobile: '', adminCode: '' });
     }, [initialUserType]);
@@ -148,10 +149,9 @@ function AuthPage({ onAdminAgentLogin, onAdminRegister, onCustomerAuth, onBack, 
             } else {
                 if (isLogin) {
                     await onAdminAgentLogin(formData.email, formData.password, userType);
-                } else { // Admin Registration
+                } else {
                     await onAdminRegister(formData.name, formData.email, formData.password, formData.adminCode);
                     alert('Admin Registration successful! Please log in.');
-                    // Switch back to admin login form after successful registration
                     setUserType('admin');
                     setIsLogin(true);
                 }
@@ -181,7 +181,7 @@ function AuthPage({ onAdminAgentLogin, onAdminRegister, onCustomerAuth, onBack, 
                     <button onClick={onBack} className="text-gray-600 hover:text-orange-500 transition-colors">&larr; Back to Home</button>
                 </div>
                 <div className="bg-white p-8 rounded-xl shadow-lg w-full">
-                    <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="FreshOnTime Logo" className="w-24 mx-auto mb-4"/>
+                    <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelo_iswxmn.jpg" alt="FreshOnTime Logo" className="w-24 mx-auto mb-4"/>
                     <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">{getTitle()}</h2>
                     
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -309,7 +309,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         {isModalOpen && <Modal title={modalType.includes('edit') ? 'Edit Details' : 'Add New'} onClose={() => setIsModalOpen(false)}>{renderModalContent()}</Modal>}
         <header className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div className="flex items-center gap-4">
-                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="FreshOnTime Logo" className="h-10 w-auto"/>
+                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelo_iswxmn.jpg" alt="FreshOnTime Logo" className="h-10 w-auto"/>
                 <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
             </div>
             <div><button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors">Logout</button></div>
@@ -395,7 +395,7 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
     const handleNavigate = (address) => { if (!address) { alert("Address not available."); return; } window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, '_blank'); };
 
     const BottomNavLink = ({ page, label, icon }) => (<button onClick={() => setActiveTab(page)} className={`flex flex-col items-center justify-center w-full transition-colors py-1 ${activeTab === page ? 'text-orange-400' : 'text-gray-400 hover:text-orange-400'}`}><span className="text-2xl">{icon}</span><span className="text-xs font-medium">{label}</span></button>);
-    const PageHeader = () => { let title = 'Deliveries'; if (activeTab === 'history') title = 'History'; if (activeTab === 'profile') title = 'Profile'; if (activeTab === 'support') title = 'Support'; return (<header className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-4"><div className="flex justify-between items-center"><div className="flex items-center gap-4"><img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="Logo" className="h-8 w-auto rounded-md"/><h1 className="text-xl font-bold text-orange-400">{title}</h1></div><div className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${isTracking ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}><span className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>{isTracking ? 'Tracking Live' : 'Tracking Off'}</div></div>{trackingError && <p className="text-xs text-red-400 text-center mt-2">{trackingError}</p>}</header>); };
+    const PageHeader = () => { let title = 'Deliveries'; if (activeTab === 'history') title = 'History'; if (activeTab === 'profile') title = 'Profile'; if (activeTab === 'support') title = 'Support'; return (<header className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-4"><div className="flex justify-between items-center"><div className="flex items-center gap-4"><img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelo_iswxmn.jpg" alt="Logo" className="h-8 w-auto rounded-md"/><h1 className="text-xl font-bold text-orange-400">{title}</h1></div><div className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${isTracking ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}><span className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>{isTracking ? 'Tracking Live' : 'Tracking Off'}</div></div>{trackingError && <p className="text-xs text-red-400 text-center mt-2">{trackingError}</p>}</header>); };
 
     const renderPageContent = () => {
         switch(activeTab) {
@@ -415,10 +415,9 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
     );
 }
 
-
 // --- Main App Component (Root) ---
 export default function App() {
-    const [view, setView] = useState('customer_portal');
+    const [view, setView] = useState('landing_page');
     const [loggedInUser, setLoggedInUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [initialAuthType, setInitialAuthType] = useState('customer');
@@ -436,7 +435,7 @@ export default function App() {
         localStorage.removeItem('user');
         setToken(null);
         setLoggedInUser(null);
-        setView('customer_portal');
+        setView('landing_page');
     }, []);
   
     const fetchData = useCallback(async (currentToken) => {
@@ -480,11 +479,11 @@ export default function App() {
                 setLoggedInUser(parsedUser);
                 if (parsedUser.role === 'Admin') setView('admin_dashboard');
                 else if (parsedUser.role === 'Agent') setView('agent_portal');
-                else setView('customer_portal');
+                else setView('customer_dashboard');
             } catch (e) { handleLogout(); }
         } else {
             setLoggedInUser(null);
-            setView('customer_portal');
+            setView('landing_page');
         }
     }, [token, handleLogout]);
 
@@ -553,7 +552,7 @@ export default function App() {
     };
     
     const handlePortalLinkClick = (userType) => {
-        setInitialAuthType(userType); // 'admin' or 'agent'
+        setInitialAuthType(userType);
         setView('auth');
     };
 
@@ -592,6 +591,7 @@ export default function App() {
     const handleApprovePassword = useCallback((requestId) => apiRequest(`/password-requests/${requestId}/approve`, 'PUT'), [apiRequest]);
     const handleUpdateNotificationPreference = useCallback((preference) => apiRequest('/agents/notifications', 'PUT', { notifications_enabled: preference }), [apiRequest]);
 
+
     const renderView = () => {
         switch (view) {
             case 'admin_dashboard':
@@ -599,10 +599,12 @@ export default function App() {
             case 'agent_portal':
                 return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allAgents={agents} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} onRequestPasswordChange={handleRequestPasswordChange} onUpdateNotificationPreference={handleUpdateNotificationPreference} />;
             case 'auth':
-                return <AuthPage onAdminAgentLogin={handleAdminAgentLogin} onAdminRegister={handleAdminRegister} onCustomerAuth={handleCustomerAuth} onBack={() => setView('customer_portal')} initialUserType={initialAuthType} />;
-            case 'customer_portal':
+                return <AuthPage onAdminAgentLogin={handleAdminAgentLogin} onAdminRegister={handleAdminRegister} onCustomerAuth={handleCustomerAuth} onBack={() => setView('landing_page')} initialUserType={initialAuthType} />;
+            case 'customer_dashboard':
+                return <CustomerDashboard user={loggedInUser} onLogout={handleLogout} />;
+            case 'landing_page':
             default:
-                return <CustomerPortal user={loggedInUser} onAuthClick={() => { setInitialAuthType('customer'); setView('auth'); }} onLogout={handleLogout} onPortalLinkClick={handlePortalLinkClick} />;
+                return <LandingPage onAuthClick={() => { setInitialAuthType('customer'); setView('auth'); }} onPortalLinkClick={handlePortalLinkClick} />;
         }
     }
 
