@@ -6,18 +6,18 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { CSVLink } from 'react-csv';
 
-// Import your components and hooks
+// --- IMPORT YOUR COMPONENTS AND HOOKS ---
 import LiveAgentTrackerPage from './components/LiveAgentTracker';
 import DashboardOverview from './components/Dashboard';
 import CustomerManagement from './components/CustomerManagement';
 import { useLocationTracker } from './hooks/useLocationTracker';
+import CustomerPortal from './components/CustomerPortal';
 
 // --- Configuration ---
 const API_URL = 'http://localhost:5000/api';
 const SOCKET_URL = 'http://localhost:5000';
 
 // --- Reusable UI Components ---
-
 const StatusPill = ({ status }) => {
     const statusClasses = {
         Pending: 'bg-yellow-100 text-yellow-800', 'In Transit': 'bg-blue-100 text-blue-800',
@@ -29,7 +29,6 @@ const StatusPill = ({ status }) => {
     };
     return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
 };
-
 const Modal = ({ title, children, onClose }) => {
     return ReactDOM.createPortal(
         <>
@@ -49,33 +48,25 @@ const Modal = ({ title, children, onClose }) => {
         document.body
     );
 };
-
-
 const ConfirmModal = ({ title, message, onConfirm, onCancel }) => (
     <Modal title={title} onClose={onCancel}>
         <p className="mb-6 text-gray-600">{message}</p>
         <div className="flex justify-end gap-4"><button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition-colors">Cancel</button><button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">Confirm</button></div>
     </Modal>
 );
-
 const TabButton = ({ label, isActive, onClick }) => (
     <button onClick={onClick} className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100'}`}>{label}</button>
 );
-
 const SearchBar = ({ onSearch, placeholder }) => (
     <input type="text" onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="p-2 border border-gray-300 rounded-lg w-full md:w-auto flex-grow bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
 );
-
-// --- Reports & Export Component ---
 const ReportsAndExport = ({ deliveries, payments, agents }) => {
     const [reportType, setReportType] = useState('deliveries');
     const [filters, setFilters] = useState({ startDate: '', endDate: '', agentId: 'all', status: 'all' });
-
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
-
     const filteredData = useMemo(() => {
         let data = reportType === 'deliveries' ? deliveries : payments;
         if (filters.startDate) data = data.filter(item => new Date(item.delivery_date || item.due_date) >= new Date(filters.startDate));
@@ -84,7 +75,6 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
         if (filters.status !== 'all') data = data.filter(item => item.status === filters.status);
         return data;
     }, [reportType, deliveries, payments, filters]);
-
     const exportToPDF = () => {
         const doc = new jsPDF();
         doc.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 16);
@@ -101,7 +91,6 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
         });
         doc.save(`${reportType}_report.pdf`);
     };
-
     const getCsvData = () => filteredData.map(item => ({
         Date: format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd'),
         Customer: item.customer?.name || 'N/A',
@@ -110,7 +99,6 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
         Amount: item.amount || 'N/A',
         Remarks: ''
     }));
-
     return (
         <div>
             <div className="p-4 bg-gray-50 rounded-lg border">
@@ -122,99 +110,121 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Status</label><select name="status" value={filters.status} onChange={handleFilterChange} className="p-2 border border-gray-300 rounded-md w-full"><option value="all">All Statuses</option><option>Pending</option><option>In Transit</option><option>Delivered</option><option>Failed</option></select></div>
                 </div>
             </div>
-
             <div className="mt-6">
-                <div className="flex justify-end items-center mb-4">
-                    <div className="flex gap-2">
-                        <CSVLink data={getCsvData()} filename={`${reportType}_report.csv`} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
-                            Export CSV
-                        </CSVLink>
-                        <button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700 transition-colors">
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
-                           Export PDF
-                        </button>
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto bg-white rounded-lg shadow">
-                    {filteredData.length > 0 ? (
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>{reportType === 'payments' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>}</tr></thead>
-                            <tbody className="bg-white divide-y divide-gray-200">{filteredData.map(item => (<tr key={item.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.customer?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.agent?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={item.status} /></td>{reportType === 'payments' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.amount}</td>}</tr>))}</tbody>
-                        </table>
-                    ) : ( <div className="text-center py-10 text-gray-500">No data found for the selected filters.</div> )}
-                </div>
+                <div className="flex justify-end items-center mb-4"><div className="flex gap-2"><CSVLink data={getCsvData()} filename={`${reportType}_report.csv`} className="bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-green-700 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>Export CSV</CSVLink><button onClick={exportToPDF} className="bg-red-600 text-white px-4 py-2 rounded-md flex items-center gap-2 hover:bg-red-700 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>Export PDF</button></div></div>
+                <div className="overflow-x-auto bg-white rounded-lg shadow">{filteredData.length > 0 ? (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>{reportType === 'payments' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>}</tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredData.map(item => (<tr key={item.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{format(new Date(item.delivery_date || item.due_date), 'yyyy-MM-dd')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.customer?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.agent?.name || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={item.status} /></td>{reportType === 'payments' && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${item.amount}</td>}</tr>))}</tbody></table>) : ( <div className="text-center py-10 text-gray-500">No data found for the selected filters.</div> )}</div>
             </div>
         </div>
     );
 };
 
 
-// --- Authentication Page Component ---
-function AuthPage({ onLogin, onRegister }) {
+// --- Authentication Page Component (UPDATED) ---
+function AuthPage({ onAdminAgentLogin, onAdminRegister, onCustomerAuth, onBack, initialUserType = 'customer' }) {
     const [isLogin, setIsLogin] = useState(true);
-    const [userType, setUserType] = useState('agent');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [adminCode, setAdminCode] = useState('');
+    const [userType, setUserType] = useState(initialUserType);
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', mobile: '', adminCode: '' });
     const [error, setError] = useState('');
+
+    // This effect ensures the form correctly resets when navigating from footer links
+    useEffect(() => {
+        setUserType(initialUserType);
+        setIsLogin(true); // Always default to login when switching types
+        setError('');
+        setFormData({ name: '', email: '', password: '', mobile: '', adminCode: '' });
+    }, [initialUserType]);
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         try {
-            if (isLogin) {
-                await onLogin(email, password, userType);
+            if (userType === 'customer') {
+                await onCustomerAuth(formData, isLogin);
             } else {
-                if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-                await onRegister(name, email, password, adminCode);
-                setIsLogin(true);
-                alert('Admin Registration successful! Please log in.');
+                if (isLogin) {
+                    await onAdminAgentLogin(formData.email, formData.password, userType);
+                } else { // Admin Registration
+                    await onAdminRegister(formData.name, formData.email, formData.password, formData.adminCode);
+                    alert('Admin Registration successful! Please log in.');
+                    // Switch back to admin login form after successful registration
+                    setUserType('admin');
+                    setIsLogin(true);
+                }
             }
         } catch (err) {
             setError(err.message);
         }
     };
 
+    const switchAuthMode = (newIsLogin, newUserType) => {
+        setIsLogin(newIsLogin);
+        setUserType(newUserType);
+        setError('');
+        setFormData({ name: '', email: '', password: '', mobile: '', adminCode: '' });
+    };
+
+    const getTitle = () => {
+        if (userType === 'admin') return isLogin ? 'Admin Login' : 'Admin Registration';
+        if (userType === 'agent') return 'Agent Login';
+        return isLogin ? 'Welcome Back!' : 'Create a Customer Account';
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-4">
-            <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1751449299/freshontimelogo_qchfme.jpg" alt="FreshOnTime Logo" className="w-32 mx-auto mb-4"/>
-                <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">{isLogin ? `${userType.charAt(0).toUpperCase() + userType.slice(1)} Login` : 'Admin Registration'}</h2>
-                <p className="text-center text-gray-500 mb-6">Welcome to FreshOnTime</p>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {!isLogin && (
-                        <>
-                            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
-                            <input type="text" value={adminCode} onChange={(e) => setAdminCode(e.target.value)} placeholder="Admin Registration Code" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
-                        </>
-                    )}
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-indigo-500" required />
-                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-                    <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg w-full transition-colors shadow-md hover:shadow-lg">{isLogin ? 'Sign In' : 'Register'}</button>
-                </form>
-            </div>
-            <div className="text-center mt-4">
-                <button onClick={() => { setIsLogin(!isLogin); setError(''); if(!isLogin) setUserType('admin'); }} className="text-indigo-600 hover:underline font-medium">
-                    {isLogin ? "Need an admin account? Register" : "Already have an account? Login"}
-                </button>
-                {isLogin && (
-                    <div className="mt-2">
-                        <button onClick={() => setUserType(userType === 'admin' ? 'agent' : 'admin')} className="text-sm text-gray-600 hover:underline">
-                            Switch to {userType === 'admin' ? 'Agent' : 'Admin'} Login
-                        </button>
+             <div className="w-full max-w-md">
+                <div className="text-center mb-6">
+                    <button onClick={onBack} className="text-gray-600 hover:text-orange-500 transition-colors">&larr; Back to Home</button>
+                </div>
+                <div className="bg-white p-8 rounded-xl shadow-lg w-full">
+                    <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="FreshOnTime Logo" className="w-24 mx-auto mb-4"/>
+                    <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">{getTitle()}</h2>
+                    
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {!isLogin && (userType === 'customer' || userType === 'admin') && (
+                           <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Full Name" className="p-3 border rounded-lg w-full" required />
+                        )}
+                        {!isLogin && userType === 'customer' && (
+                            <input type="tel" name="mobile" value={formData.mobile} onChange={handleInputChange} placeholder="Phone Number" className="p-3 border rounded-lg w-full" required />
+                        )}
+                        {!isLogin && userType === 'admin' && (
+                            <input type="text" name="adminCode" value={formData.adminCode} onChange={handleInputChange} placeholder="Admin Registration Code" className="p-3 border rounded-lg w-full" required />
+                        )}
+                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Email" className="p-3 border rounded-lg w-full" required />
+                        <input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="Password" className="p-3 border rounded-lg w-full" required />
+                        
+                        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                        
+                        <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 w-full rounded-lg transition-colors">{isLogin ? 'Login' : 'Sign Up'}</button>
+                    </form>
+
+                    <div className="text-center mt-4 text-sm text-gray-600">
+                        {userType === 'customer' && (
+                            isLogin
+                            ? <>Don't have an account? <button onClick={() => switchAuthMode(false, 'customer')} className="font-semibold text-orange-500 hover:underline">Sign Up</button></>
+                            : <>Already have an account? <button onClick={() => switchAuthMode(true, 'customer')} className="font-semibold text-orange-500 hover:underline">Login</button></>
+                        )}
+                        {userType === 'admin' && isLogin && (
+                           <>Need to register a new Admin? <button onClick={() => switchAuthMode(false, 'admin')} className="font-semibold text-orange-500 hover:underline">Register</button></>
+                        )}
                     </div>
-                )}
+
+                     <div className="text-center mt-2 text-xs text-gray-400">
+                        <button onClick={() => switchAuthMode(true, 'admin')} className="hover:underline">Admin Login</button>
+                        <span className="mx-1">&middot;</span>
+                        <button onClick={() => switchAuthMode(true, 'agent')} className="hover:underline">Agent Login</button>
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
-
-// --- Admin Dashboard Component ---
+// --- Admin Dashboard Component (Existing Code) ---
 function AdminDashboard({ onLogout, customers, agents, deliveries, payments, supportTickets, passwordRequests, onAddCustomer, onAddAgent, onCreateDelivery, onUpdateCustomer, onDeleteCustomer, onUpdateAgent, onDeleteAgent, onUpdateDelivery, onDeleteDelivery, onAddPayment, onUpdatePayment, onDeletePayment, onResolveTicket, onApprovePassword }) {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -222,7 +232,6 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
     const [formState, setFormState] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
   
-    // FIX: Stabilize the openModal function to prevent re-renders
     const openModal = useCallback((type, item = null) => {
         setModalType(type);
         if (item) { 
@@ -237,7 +246,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
             setFormState(defaultState[type]);
         }
         setIsModalOpen(true);
-    }, []); // Empty dependency array means this function is created only once.
+    }, []);
   
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -263,7 +272,6 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         setIsModalOpen(false);
     };
 
-    // FIX: Create stable versions of the handlers to pass down as props
     const handleAddCustomerClick = useCallback(() => openModal('addCustomer'), [openModal]);
     const handleUpdateCustomerClick = useCallback((customer) => openModal('editCustomer', customer), [openModal]);
 
@@ -282,7 +290,10 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
 
         switch (modalType) {
             case 'addCustomer': case 'editCustomer':
-                return (<form onSubmit={handleSubmit} className="space-y-4"><input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Name" className={inputClass} required/><input name="email" value={formState.email || ''} onChange={handleFormChange} placeholder="Email" className={inputClass} required/><input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className={inputClass} required/><textarea name="address" value={formState.address || ''} onChange={handleFormChange} placeholder="Address" className={inputClass} required/><div><label className={labelClass}>First Purchase</label><input type="date" name="first_purchase_date" value={formState.first_purchase_date?.split('T')[0] || ''} onChange={handleFormChange} className={inputClass}/></div><button type="submit" className={buttonClass}>Save Customer</button></form>);
+                const purchaseDate = (formState.first_purchase_date && typeof formState.first_purchase_date === 'string')
+                    ? formState.first_purchase_date.split('T')[0]
+                    : '';
+                return (<form onSubmit={handleSubmit} className="space-y-4"><input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Name" className={inputClass} required/><input name="email" value={formState.email || ''} onChange={handleFormChange} placeholder="Email" className={inputClass} required/><input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className={inputClass} required/><textarea name="address" value={formState.address || ''} onChange={handleFormChange} placeholder="Address" className={inputClass} required/><div><label className={labelClass}>First Purchase</label><input type="date" name="first_purchase_date" value={purchaseDate} onChange={handleFormChange} className={inputClass}/></div><button type="submit" className={buttonClass}>Save Customer</button></form>);
             case 'addAgent': case 'editAgent':
                  return (<form onSubmit={handleSubmit} className="space-y-4"><input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Agent Name" className={inputClass} required/><input type="email" name="email" value={formState.email || ''} onChange={handleFormChange} placeholder="Login Email" className={inputClass} required/><input name="mobile" value={formState.mobile || ''} onChange={handleFormChange} placeholder="Mobile" className={inputClass} required/>{modalType === 'addAgent' && <input type="password" name="password" value={formState.password || ''} onChange={handleFormChange} placeholder="Login Password" className={inputClass} required/>}<textarea name="bank_details" value={formState.bank_details || ''} onChange={handleFormChange} placeholder="Bank Details (Account #, IFSC)" className={inputClass}/><div><label className={labelClass}>Joined Date</label><input type="date" name="join_date" value={formState.join_date?.split('T')[0] || ''} onChange={handleFormChange} className={inputClass}/></div><div><label className={labelClass}>Salary Status</label><select name="salary_status" value={formState.salary_status || 'Unpaid'} onChange={handleFormChange} className={inputClass}><option>Unpaid</option><option>Paid</option></select></div><button type="submit" className={buttonClass}>Save Agent</button></form>);
             case 'createDelivery': case 'editDelivery':
@@ -298,7 +309,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         {isModalOpen && <Modal title={modalType.includes('edit') ? 'Edit Details' : 'Add New'} onClose={() => setIsModalOpen(false)}>{renderModalContent()}</Modal>}
         <header className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div className="flex items-center gap-4">
-                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1751449299/freshontimelogo_qchfme.jpg" alt="FreshOnTime Logo" className="h-10 w-auto"/>
+                <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="FreshOnTime Logo" className="h-10 w-auto"/>
                 <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
             </div>
             <div><button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors">Logout</button></div>
@@ -320,11 +331,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
         {activeTab === 'dashboard' && <DashboardOverview deliveries={deliveries} payments={payments} agents={agents} customers={customers} />}
         {activeTab === 'customers' && <CustomerManagement customers={customers} deliveries={deliveries} payments={payments} onUpdateCustomer={handleUpdateCustomerClick} onDeleteCustomer={onDeleteCustomer} onAddCustomer={handleAddCustomerClick} />}
 
-        {activeTab === 'live_map' && (
-            <div className="h-[70vh] bg-white shadow-lg rounded-xl overflow-hidden">
-                 <LiveAgentTrackerPage />
-            </div>
-        )}
+        {activeTab === 'live_map' && (<div className="h-[70vh] bg-white shadow-lg rounded-xl overflow-hidden"><LiveAgentTrackerPage /></div>)}
         {activeTab !== 'dashboard' && activeTab !== 'live_map' && activeTab !== 'customers' && (
             <div className="bg-white shadow-lg rounded-xl p-4 md:p-6">
                 {activeTab !== 'reports' && (
@@ -349,7 +356,7 @@ function AdminDashboard({ onLogout, customers, agents, deliveries, payments, sup
     );
 }
 
-// --- Agent Portal Component ---
+// --- Agent Portal Component (Existing Code) ---
 function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, onUpdateDelivery, onReportIssue, onRequestPasswordChange, onUpdateNotificationPreference }) {
     const { isTracking, error: trackingError } = useLocationTracker(agent);
     const [activeTab, setActiveTab] = useState('deliveries');
@@ -388,7 +395,7 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
     const handleNavigate = (address) => { if (!address) { alert("Address not available."); return; } window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, '_blank'); };
 
     const BottomNavLink = ({ page, label, icon }) => (<button onClick={() => setActiveTab(page)} className={`flex flex-col items-center justify-center w-full transition-colors py-1 ${activeTab === page ? 'text-orange-400' : 'text-gray-400 hover:text-orange-400'}`}><span className="text-2xl">{icon}</span><span className="text-xs font-medium">{label}</span></button>);
-    const PageHeader = () => { let title = 'Deliveries'; if (activeTab === 'history') title = 'History'; if (activeTab === 'profile') title = 'Profile'; if (activeTab === 'support') title = 'Support'; return (<header className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-4"><div className="flex justify-between items-center"><div className="flex items-center gap-4"><img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1751449299/freshontimelogo_qchfme.jpg" alt="Logo" className="h-8 w-auto rounded-md"/><h1 className="text-xl font-bold text-orange-400">{title}</h1></div><div className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${isTracking ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}><span className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>{isTracking ? 'Tracking Live' : 'Tracking Off'}</div></div>{trackingError && <p className="text-xs text-red-400 text-center mt-2">{trackingError}</p>}</header>); };
+    const PageHeader = () => { let title = 'Deliveries'; if (activeTab === 'history') title = 'History'; if (activeTab === 'profile') title = 'Profile'; if (activeTab === 'support') title = 'Support'; return (<header className="sticky top-0 bg-slate-900/80 backdrop-blur-sm z-10 p-4"><div className="flex justify-between items-center"><div className="flex items-center gap-4"><img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="Logo" className="h-8 w-auto rounded-md"/><h1 className="text-xl font-bold text-orange-400">{title}</h1></div><div className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${isTracking ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}><span className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>{isTracking ? 'Tracking Live' : 'Tracking Off'}</div></div>{trackingError && <p className="text-xs text-red-400 text-center mt-2">{trackingError}</p>}</header>); };
 
     const renderPageContent = () => {
         switch(activeTab) {
@@ -411,9 +418,10 @@ function AgentPortal({ agent, allDeliveries, allAgents, allCustomers, onLogout, 
 
 // --- Main App Component (Root) ---
 export default function App() {
-    const [page, setPage] = useState('auth');
+    const [view, setView] = useState('customer_portal');
     const [loggedInUser, setLoggedInUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('token'));
+    const [initialAuthType, setInitialAuthType] = useState('customer');
     
     const [customers, setCustomers] = useState([]);
     const [agents, setAgents] = useState([]);
@@ -421,7 +429,6 @@ export default function App() {
     const [payments, setPayments] = useState([]);
     const [supportTickets, setSupportTickets] = useState([]);
     const [passwordRequests, setPasswordRequests] = useState([]);
-
     const [confirmState, setConfirmState] = useState({ isOpen: false });
 
     const handleLogout = useCallback(() => {
@@ -429,7 +436,7 @@ export default function App() {
         localStorage.removeItem('user');
         setToken(null);
         setLoggedInUser(null);
-        setPage('auth');
+        setView('customer_portal');
     }, []);
   
     const fetchData = useCallback(async (currentToken) => {
@@ -448,12 +455,8 @@ export default function App() {
             const checkResponse = async (res, setter) => {
                 if (res.ok) {
                     const data = await res.json();
-                    if (Array.isArray(data)) {
-                        setter(data);
-                    }
-                } else {
-                    console.error(`Failed to fetch ${setter.name}`);
-                }
+                    if (Array.isArray(data)) setter(data);
+                } else console.error(`Failed to fetch ${setter.name}`);
             };
             
             await checkResponse(customersRes, setCustomers);
@@ -475,44 +478,38 @@ export default function App() {
             try {
                 const parsedUser = JSON.parse(userFromStorage);
                 setLoggedInUser(parsedUser);
-                setPage(parsedUser.role === 'Admin' ? 'admin_dashboard' : 'agent_portal');
-            } catch (e) {
-                handleLogout();
-            }
+                if (parsedUser.role === 'Admin') setView('admin_dashboard');
+                else if (parsedUser.role === 'Agent') setView('agent_portal');
+                else setView('customer_portal');
+            } catch (e) { handleLogout(); }
         } else {
             setLoggedInUser(null);
-            setPage('auth');
+            setView('customer_portal');
         }
     }, [token, handleLogout]);
 
     useEffect(() => {
-        if (loggedInUser) {
+        if (token && loggedInUser?.role !== 'Customer') {
             fetchData(token);
         }
     }, [loggedInUser, token, fetchData]);
 
-    // --- WebSocket useEffect ---
     useEffect(() => {
         if (!token) return;
-
         const socket = io(SOCKET_URL);
-        const refetch = () => fetchData(token);
-
+        const refetch = () => {
+            if(loggedInUser?.role !== 'Customer') fetchData(token);
+        };
         socket.on('connect', () => console.log('WebSocket connected!'));
         socket.on('connect_error', (err) => console.error('WebSocket connection error:', err.message));
-
-        // Listen for all update events
         socket.on('deliveries_updated', refetch);
         socket.on('support_tickets_updated', refetch);
         socket.on('password_requests_updated', refetch);
         socket.on('customers_updated', refetch);
         socket.on('agents_updated', refetch);
         socket.on('payments_updated', refetch);
-
-        return () => {
-            socket.disconnect();
-        };
-    }, [token, fetchData]);
+        return () => socket.disconnect();
+    }, [token, loggedInUser, fetchData]);
 
     const handleApiError = async (response) => {
         if (!response.ok) {
@@ -526,12 +523,26 @@ export default function App() {
         return response;
     };
 
-    const handleRegister = async (name, email, password, adminCode) => {
-        const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, adminCode, role: 'Admin' }) });
+    const handleAdminRegister = async (name, email, password, adminCode) => {
+        const res = await fetch(`${API_URL}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, adminCode }) });
         await handleApiError(res);
     };
 
-    const handleLogin = async (email, password, userType) => {
+    const handleCustomerAuth = async (authData, isLogin) => {
+        const endpoint = isLogin ? 'login' : 'register';
+        const res = await fetch(`${API_URL}/customer-auth/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(authData) });
+        await handleApiError(res);
+        if (isLogin) {
+            const { token: newToken, user } = await res.json();
+            localStorage.setItem('token', newToken);
+            localStorage.setItem('user', JSON.stringify(user));
+            setToken(newToken);
+        } else {
+            alert('Sign up successful! Please log in.');
+        }
+    };
+
+    const handleAdminAgentLogin = async (email, password, userType) => {
         const loginUrl = userType === 'admin' ? `${API_URL}/auth/login` : `${API_URL}/agents/login`;
         const res = await fetch(loginUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
         await handleApiError(res);
@@ -539,6 +550,11 @@ export default function App() {
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(user));
         setToken(newToken);
+    };
+    
+    const handlePortalLinkClick = (userType) => {
+        setInitialAuthType(userType); // 'admin' or 'agent'
+        setView('auth');
     };
 
     const apiRequest = useCallback(async (endpoint, method, body = null) => {
@@ -554,60 +570,46 @@ export default function App() {
         }
     }, [token]);
   
-    const requestConfirmation = useCallback((title, message, onConfirm) => {
-        setConfirmState({ isOpen: true, title, message, onConfirm });
-    }, []);
-
-    const handleConfirm = useCallback(() => {
-        if (confirmState.onConfirm) {
-            confirmState.onConfirm();
-        }
-        setConfirmState({ isOpen: false });
-    }, [confirmState]);
-
-    const handleCancelConfirm = useCallback(() => {
-        setConfirmState({ isOpen: false });
-    }, []);
+    const requestConfirmation = useCallback((title, message, onConfirm) => { setConfirmState({ isOpen: true, title, message, onConfirm }); }, []);
+    const handleConfirm = useCallback(() => { if (confirmState.onConfirm) confirmState.onConfirm(); setConfirmState({ isOpen: false }); }, [confirmState]);
+    const handleCancelConfirm = useCallback(() => { setConfirmState({ isOpen: false }); }, []);
 
     const handleAddCustomer = useCallback((customer) => apiRequest('/customers', 'POST', customer), [apiRequest]);
     const handleUpdateCustomer = useCallback((customer) => apiRequest(`/customers/${customer.id}`, 'PUT', customer), [apiRequest]);
     const handleDeleteCustomer = useCallback((id) => requestConfirmation('Delete Customer?', 'Are you sure?', () => apiRequest(`/customers/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
-    
     const handleAddAgent = useCallback((agent) => apiRequest('/agents', 'POST', agent), [apiRequest]);
     const handleUpdateAgent = useCallback((agent) => apiRequest(`/agents/${agent.id}`, 'PUT', agent), [apiRequest]);
     const handleDeleteAgent = useCallback((id) => requestConfirmation('Delete Agent?', 'Are you sure?', () => apiRequest(`/agents/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
-    
     const handleCreateDelivery = useCallback((delivery) => apiRequest('/deliveries', 'POST', delivery), [apiRequest]);
     const handleUpdateDelivery = useCallback((delivery) => apiRequest(`/deliveries/${delivery.id}`, 'PUT', delivery), [apiRequest]);
     const handleDeleteDelivery = useCallback((id) => requestConfirmation('Delete Delivery?', 'Are you sure?', () => apiRequest(`/deliveries/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
-    
     const handleAddPayment = useCallback((payment) => apiRequest('/payments', 'POST', payment), [apiRequest]);
     const handleUpdatePayment = useCallback((payment) => apiRequest(`/payments/${payment.id}`, 'PUT', payment), [apiRequest]);
     const handleDeletePayment = useCallback((id) => requestConfirmation('Delete Payment?', 'Are you sure?', () => apiRequest(`/payments/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
-    
     const handleReportIssue = useCallback((issue) => apiRequest('/support', 'POST', issue), [apiRequest]);
     const handleResolveTicket = useCallback((ticketId) => apiRequest(`/support/${ticketId}`, 'PUT', { status: 'Resolved' }), [apiRequest]);
-    
     const handleRequestPasswordChange = useCallback((newPassword) => apiRequest('/password-requests', 'POST', { newPassword }), [apiRequest]);
     const handleApprovePassword = useCallback((requestId) => apiRequest(`/password-requests/${requestId}/approve`, 'PUT'), [apiRequest]);
     const handleUpdateNotificationPreference = useCallback((preference) => apiRequest('/agents/notifications', 'PUT', { notifications_enabled: preference }), [apiRequest]);
 
-    const renderPage = () => {
-        switch (page) {
+    const renderView = () => {
+        switch (view) {
             case 'admin_dashboard':
                 return <AdminDashboard onLogout={handleLogout} customers={customers} agents={agents} deliveries={deliveries} payments={payments} supportTickets={supportTickets} passwordRequests={passwordRequests} onAddCustomer={handleAddCustomer} onAddAgent={handleAddAgent} onCreateDelivery={handleCreateDelivery} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery} onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment} onResolveTicket={handleResolveTicket} onApprovePassword={handleApprovePassword} />;
             case 'agent_portal':
                 return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allAgents={agents} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} onRequestPasswordChange={handleRequestPasswordChange} onUpdateNotificationPreference={handleUpdateNotificationPreference} />;
             case 'auth':
+                return <AuthPage onAdminAgentLogin={handleAdminAgentLogin} onAdminRegister={handleAdminRegister} onCustomerAuth={handleCustomerAuth} onBack={() => setView('customer_portal')} initialUserType={initialAuthType} />;
+            case 'customer_portal':
             default:
-                return <AuthPage onLogin={handleLogin} onRegister={handleRegister} />;
+                return <CustomerPortal user={loggedInUser} onAuthClick={() => { setInitialAuthType('customer'); setView('auth'); }} onLogout={handleLogout} onPortalLinkClick={handlePortalLinkClick} />;
         }
     }
 
     return (
         <>
             {confirmState.isOpen && <ConfirmModal {...confirmState} onConfirm={handleConfirm} onCancel={handleCancelConfirm} />}
-            {renderPage()}
+            {renderView()}
         </>
     );
 }
