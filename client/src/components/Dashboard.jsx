@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { format, subDays, startOfMonth } from 'date-fns';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+
+// ADMIN DASHBOARD ANALYTICS
 // --- Reusable Components ---
 const KpiCard = ({ title, value, trend, icon, color, insight }) => (
     <div className="bg-white p-6 rounded-xl shadow-md flex flex-col justify-between">

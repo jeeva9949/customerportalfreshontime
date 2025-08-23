@@ -13,7 +13,7 @@ import CustomerManagement from './components/CustomerManagement';
 import { useLocationTracker } from './hooks/useLocationTracker';
 // --- UPDATED IMPORTS ---
 import LandingPage from './components/LandingPage';
-import CustomerDashboard from './components/CustomerDashboard';
+import CustomerPortal from './components/CustomerDashboard'; // Import the new portal
 
 // --- Configuration ---
 const API_URL = 'http://localhost:5000/api';
@@ -479,7 +479,7 @@ export default function App() {
                 setLoggedInUser(parsedUser);
                 if (parsedUser.role === 'Admin') setView('admin_dashboard');
                 else if (parsedUser.role === 'Agent') setView('agent_portal');
-                else setView('customer_dashboard');
+                else setView('customer_portal'); // <-- UPDATED VIEW
             } catch (e) { handleLogout(); }
         } else {
             setLoggedInUser(null);
@@ -600,8 +600,8 @@ export default function App() {
                 return <AgentPortal agent={loggedInUser} allDeliveries={deliveries} allAgents={agents} allCustomers={customers} onLogout={handleLogout} onUpdateDelivery={handleUpdateDelivery} onReportIssue={handleReportIssue} onRequestPasswordChange={handleRequestPasswordChange} onUpdateNotificationPreference={handleUpdateNotificationPreference} />;
             case 'auth':
                 return <AuthPage onAdminAgentLogin={handleAdminAgentLogin} onAdminRegister={handleAdminRegister} onCustomerAuth={handleCustomerAuth} onBack={() => setView('landing_page')} initialUserType={initialAuthType} />;
-            case 'customer_dashboard':
-                return <CustomerDashboard user={loggedInUser} onLogout={handleLogout} />;
+            case 'customer_portal': // <-- USE THE NEW PORTAL
+                return <CustomerPortal user={loggedInUser} onLogout={handleLogout} onBrowseMenu={() => setView('landing_page')} />;
             case 'landing_page':
             default:
                 return <LandingPage onAuthClick={() => { setInitialAuthType('customer'); setView('auth'); }} onPortalLinkClick={handlePortalLinkClick} />;
