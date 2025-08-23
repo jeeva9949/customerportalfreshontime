@@ -1,13 +1,10 @@
-// ====================================================
-// --- File: server/routes/supportRoutes.js ---
-// ====================================================
 const express = require('express');
 const router = express.Router();
 const supportController = require('../controllers/supportController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 
-router.get('/', authMiddleware, supportController.getAllTickets);
-router.post('/', authMiddleware, supportController.createTicket);
-router.put('/:id', authMiddleware, supportController.updateTicket); // This route handles the "Resolve" action
+router.get('/', protect, supportController.getAllTickets);
+router.post('/', protect, supportController.createTicket);
+router.put('/:id', protect, supportController.updateTicket);
 
 module.exports = router;

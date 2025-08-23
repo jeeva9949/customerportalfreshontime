@@ -68,6 +68,7 @@ exports.login = async (req, res) => {
     }
 };
 
+// --- THIS FUNCTION IS NOW CORRECTLY EXPORTED ---
 exports.updateNotificationPreference = async (req, res) => {
     try {
         const agentId = req.user.id;

@@ -1,14 +1,11 @@
-// ====================================================
-// --- File: server/routes/deliveryRoutes.js ---
-// ====================================================
 const express = require('express');
 const router = express.Router();
 const deliveryController = require('../controllers/deliveryController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 
-router.get('/', authMiddleware, deliveryController.getAllDeliveries);
-router.post('/', authMiddleware, deliveryController.createDelivery);
-router.put('/:id', authMiddleware, deliveryController.updateDelivery);
-router.delete('/:id', authMiddleware, deliveryController.deleteDelivery);
+router.get('/', protect, deliveryController.getAllDeliveries);
+router.post('/', protect, deliveryController.createDelivery);
+router.put('/:id', protect, deliveryController.updateDelivery);
+router.delete('/:id', protect, deliveryController.deleteDelivery);
 
 module.exports = router;

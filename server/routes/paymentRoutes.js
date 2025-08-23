@@ -1,14 +1,13 @@
-// ====================================================
-// --- File: server/routes/paymentRoutes.js ---
-// ====================================================
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
-const authMiddleware = require('../middleware/authMiddleware');
+// CORRECTED IMPORT: Destructure 'protect' from the middleware module
+const { protect } = require('../middleware/authMiddleware');
 
-router.get('/', authMiddleware, paymentController.getAllPayments);
-router.post('/', authMiddleware, paymentController.createPayment);
-router.put('/:id', authMiddleware, paymentController.updatePayment);
-router.delete('/:id', authMiddleware, paymentController.deletePayment);
+// Use the 'protect' function directly
+router.get('/', protect, paymentController.getAllPayments);
+router.post('/', protect, paymentController.createPayment);
+router.put('/:id', protect, paymentController.updatePayment);
+router.delete('/:id', protect, paymentController.deletePayment);
 
 module.exports = router;
