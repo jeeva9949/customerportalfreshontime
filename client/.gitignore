@@ -1,3 +1,4 @@
-# Ignore Node.js dependencies and environment variables
-node_modules
-.env
+node_modules/
+.cache/
+dist/
+build/
