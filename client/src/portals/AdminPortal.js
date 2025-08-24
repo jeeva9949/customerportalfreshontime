@@ -115,15 +115,38 @@ const ReportsAndExport = ({ deliveries, payments, agents }) => {
 
 // --- Main Admin Dashboard Component ---
 export default function AdminPortal({ 
-    onLogout, customers, agents, deliveries, payments, supportTickets, passwordRequests,
-    onAddCustomer, onUpdateCustomer, onDeleteCustomer, 
-    onAddAgent, onUpdateAgent, onDeleteAgent,
-    onCreateDelivery, onUpdateDelivery, onDeleteDelivery,
-    onAddPayment, onUpdatePayment, onDeletePayment,
-    onResolveTicket, onApprovePassword,
-    products, categories, orders,
-    onAddProduct, onUpdateProduct, onDeleteProduct,
-    onAddCategory, ModalComponent
+    onLogout, 
+    customers = [], 
+    agents = [], 
+    deliveries = [], 
+    payments = [], 
+    supportTickets = [], 
+    passwordRequests = [],
+    products = [], 
+    categories = [], 
+    orders = [], 
+    subscriptionPlans = [],
+    onAddCustomer = () => {}, 
+    onUpdateCustomer = () => {}, 
+    onDeleteCustomer = () => {}, 
+    onAddAgent = () => {}, 
+    onUpdateAgent = () => {}, 
+    onDeleteAgent = () => {},
+    onCreateDelivery = () => {}, 
+    onUpdateDelivery = () => {}, 
+    onDeleteDelivery = () => {},
+    onAddPayment = () => {}, 
+    onUpdatePayment = () => {}, 
+    onDeletePayment = () => {},
+    onResolveTicket = () => {}, 
+    onApprovePassword = () => {},
+    onAddProduct = () => {}, 
+    onUpdateProduct = () => {}, 
+    onDeleteProduct = () => {},
+    onAddCategory = () => {}, 
+    onAddSubscriptionPlan = () => {}, 
+    onUpdateSubscriptionPlan = () => {}, 
+    ModalComponent
 }) {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -142,7 +165,8 @@ export default function AdminPortal({
                 createDelivery: { customer_id: '', agent_id: '', item: '', status: 'Pending' },
                 addPayment: { customer_id: '', amount: '', status: 'Due' },
                 addProduct: { name: '', description: '', price: '', stock: '', categoryId: '' },
-                addCategory: { name: '', description: '' }
+                addCategory: { name: '', description: '' },
+                addSubscriptionPlan: { name: '', price: '', duration: '', bestValue: false }
             };
             setFormState(defaultState[type]);
         }
@@ -171,6 +195,8 @@ export default function AdminPortal({
             case 'addProduct': onAddProduct(formState); break;
             case 'editProduct': onUpdateProduct(formState); break;
             case 'addCategory': onAddCategory(formState); break;
+            case 'addSubscriptionPlan': onAddSubscriptionPlan(formState); break;
+            case 'editSubscriptionPlan': onUpdateSubscriptionPlan(formState); break;
             default: break;
         }
         setIsModalOpen(false);
@@ -180,6 +206,8 @@ export default function AdminPortal({
     const handleUpdateAgentClick = useCallback((agent) => openModal('editAgent', agent), [openModal]);
     const handleUpdateDeliveryClick = useCallback((delivery) => openModal('editDelivery', delivery), [openModal]);
     const handleUpdateProductClick = useCallback((product) => openModal('editProduct', product), [openModal]);
+    const handleUpdateSubscriptionPlanClick = useCallback((plan) => openModal('editSubscriptionPlan', plan), [openModal]);
+
     
     const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())), [products, searchTerm]);
     const filteredOrders = useMemo(() => orders.filter(o => o.id.toString().includes(searchTerm) || (o.Customer && o.Customer.name.toLowerCase().includes(searchTerm.toLowerCase()))), [orders, searchTerm]);
@@ -187,6 +215,7 @@ export default function AdminPortal({
     const filteredAgents = useMemo(() => agents.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.email.toLowerCase().includes(searchTerm.toLowerCase())), [agents, searchTerm]);
     const filteredPayments = useMemo(() => payments.filter(p => (p.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())), [payments, searchTerm]);
     const filteredSupportTickets = useMemo(() => supportTickets.filter(t => (t.agent?.name || '').toLowerCase().includes(searchTerm.toLowerCase())), [supportTickets, searchTerm]);
+    const filteredSubscriptionPlans = useMemo(() => subscriptionPlans.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())), [subscriptionPlans, searchTerm]);
 
     
     const renderModalContent = () => {
@@ -223,6 +252,14 @@ export default function AdminPortal({
                     <textarea name="description" value={formState.description || ''} onChange={handleFormChange} placeholder="Description" className={inputClass} />
                     <button type="submit" className={buttonClass}>Save Category</button>
                 </form>);
+            case 'addSubscriptionPlan': case 'editSubscriptionPlan':
+                return (<form onSubmit={handleSubmit} className="space-y-4">
+                    <input name="name" value={formState.name || ''} onChange={handleFormChange} placeholder="Plan Name" className={inputClass} required/>
+                    <input type="number" name="price" value={formState.price || ''} onChange={handleFormChange} placeholder="Price" className={inputClass} required/>
+                    <input name="duration" value={formState.duration || ''} onChange={handleFormChange} placeholder="Duration (e.g., /month)" className={inputClass} />
+                    <div className="flex items-center"><input type="checkbox" id="bestValue" name="bestValue" checked={!!formState.bestValue} onChange={handleFormChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"/><label htmlFor="bestValue" className="ml-2 block text-sm text-gray-900">Best Value</label></div>
+                    <button type="submit" className={buttonClass}>Save Plan</button>
+                </form>);
             default: return null;
         }
     };
@@ -242,6 +279,7 @@ export default function AdminPortal({
                 <TabButton label="Dashboard" isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
                 <TabButton label="Orders" isActive={activeTab === 'orders'} onClick={() => setActiveTab('orders')} />
                 <TabButton label="Products" isActive={activeTab === 'products'} onClick={() => setActiveTab('products')} />
+                <TabButton label="Subscriptions" isActive={activeTab === 'subscriptions'} onClick={() => setActiveTab('subscriptions')} />
                 <TabButton label="Deliveries" isActive={activeTab === 'deliveries'} onClick={() => setActiveTab('deliveries')} />
                 <TabButton label="Customers" isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
                 <TabButton label="Agents" isActive={activeTab === 'agents'} onClick={() => setActiveTab('agents')} />
@@ -266,10 +304,12 @@ export default function AdminPortal({
                     {activeTab === 'payments' && <button onClick={() => openModal('addPayment')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-indigo-700 transition-colors w-full md:w-auto">+ Add Payment</button>}
                     {activeTab === 'products' && <button onClick={() => openModal('addProduct')} className="bg-blue-500 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-blue-600 transition-colors w-full md:w-auto">+ Add Product</button>}
                     {activeTab === 'products' && <button onClick={() => openModal('addCategory')} className="bg-purple-500 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-purple-600 transition-colors w-full md:w-auto ml-2">+ Add Category</button>}
+                    {activeTab === 'subscriptions' && <button onClick={() => openModal('addSubscriptionPlan')} className="bg-teal-500 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-teal-600 transition-colors w-full md:w-auto">+ Add Plan</button>}
                 </div>
                 <div className="overflow-x-auto">
                     {activeTab === 'orders' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredOrders.map(o => (<tr key={o.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{o.id}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{o.Customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${o.totalAmount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={o.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(o.createdAt).toLocaleDateString()}</td></tr>))}</tbody></table>)}
                     {activeTab === 'products' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredProducts.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.Category?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.price}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.stock}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => handleUpdateProductClick(p)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteProduct(p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
+                    {activeTab === 'subscriptions' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Best Value</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredSubscriptionPlans.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.price}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.duration}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.bestValue ? 'Yes' : 'No'}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => handleUpdateSubscriptionPlanClick(p)} className="text-indigo-600 hover:text-indigo-900">Edit</button></td></tr>))}</tbody></table>)}
                     {activeTab === 'deliveries' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recurring</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredDeliveries.map(d => (<tr key={d.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{d.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.agent?.name || 'Unassigned'}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(d.delivery_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={d.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{d.is_recurring ? 'Yes' : 'No'}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => handleUpdateDeliveryClick(d)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteDelivery(d.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
                     {activeTab === 'agents' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredAgents.map(a => (<tr key={a.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{a.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><div>{a.email}</div><div>{a.mobile}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(a.join_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={a.salary_status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => handleUpdateAgentClick(a)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeleteAgent(a.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}
                     {activeTab === 'payments' && (<table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredPayments.map(p => (<tr key={p.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.amount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={p.status} /></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(p.due_date).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button><button onClick={() => onDeletePayment(p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table>)}

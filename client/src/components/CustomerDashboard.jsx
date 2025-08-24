@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import SubscriptionPage from './SubscriptionPage'; // Import the dedicated SubscriptionPage component
 
 // --- Helper Components ---
 
@@ -184,34 +185,6 @@ const OrdersPage = ({ orders }) => (
     </AnimatedPage>
 );
 
-const SubscriptionsPage = ({ subscriptionPlans }) => (
-    <AnimatedPage>
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">My Subscriptions</h1>
-        <div className="space-y-4">
-            {/* This part will need to be connected to a new API endpoint to fetch user's specific subscriptions */}
-            <p className="text-center text-gray-500 py-10 bg-white rounded-xl shadow-sm">You have no active subscriptions.</p>
-        </div>
-
-        <div className="mt-12">
-            <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-800">Explore Our Subscription Plans</h2>
-                <p className="text-gray-600 mt-2">Save more with our subscription plans</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {subscriptionPlans.map((plan, i) => (
-                    <div key={i} className={`relative rounded-2xl p-8 border-2 transition-all transform hover:-translate-y-2 ${plan.bestValue ? 'border-green-500 bg-green-50 shadow-2xl' : 'bg-white shadow-lg'}`}>
-                        {plan.bestValue && <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full absolute -top-3 right-5 transform rotate-3">Best Value ⭐</span>}
-                        <h3 className="text-2xl font-bold">{plan.name}</h3>
-                        <p className="text-4xl font-bold my-4">₹{plan.price}<span className="text-lg font-medium text-gray-500">{plan.duration}</span></p>
-                        <button className={`w-full py-3 rounded-lg font-semibold transition-all ${plan.bestValue ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>Subscribe Now</button>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </AnimatedPage>
-);
-
-
 const ProfilePage = ({ user, onNavigate }) => (
     <AnimatedPage>
         <h1 className="text-2xl font-bold text-gray-800 mb-4">My Profile</h1>
@@ -276,7 +249,7 @@ export default function CustomerPortal({ user, onLogout, onCreateOrder, products
             case 'menu': return <MenuPage products={products} categories={categories} onAddToCart={handleAddToCart} />;
             case 'cart': return <CartPage cart={cart} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} />;
             case 'orders': return <OrdersPage orders={orders} />;
-            case 'subscriptions': return <SubscriptionsPage subscriptionPlans={subscriptionPlans} />;
+            case 'subscriptions': return <SubscriptionPage subscriptionPlans={subscriptionPlans} />;
             case 'profile': return <ProfilePage user={user} onNavigate={setActiveTab} />;
             default: return <DashboardHomePage user={user} products={products} categories={categories} onAddToCart={handleAddToCart} />;
         }
@@ -347,42 +320,3 @@ export default function CustomerPortal({ user, onLogout, onCreateOrder, products
         </div>
     );
 }
-
-
-
-
-// --- DUMMY DATA (Can be moved to data.js later) ---
-// const mockData = {
-//     user: { name: 'Jeeva' },
-//     allItems: [
-//         { id: 1, name: 'Sunrise Citrus Bowl', price: 220, image: 'https://images.unsplash.com/photo-1577234286637-4211713a3a69?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=600', category: 'Fruit Bowls' },
-//         { id: 3, name: 'Berry Blast Bowl', price: 180, image: 'https://images.unsplash.com/photo-1590342321329-092a1112a5b7?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=600', category: 'Fruit Bowls' },
-//         { id: 2, name: 'Avocado Green Smoothie', price: 190, image: 'https://images.unsplash.com/photo-1625937326925-385050a35888?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=600', category: 'Smoothies' },
-//         { id: 4, name: 'Mango Lassi', price: 150, image: 'https://images.unsplash.com/photo-1622222033333-c379342e4b67?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=600', category: 'Smoothies' },
-//         { id: 5, name: 'South Indian Veg Tiffin', price: 250, image: 'https://plus.unsplash.com/premium_photo-1663852297267-3259b7a062e0?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=600', category: 'Tiffins'},
-//         { id: 6, name: 'Fresh Oranges (1kg)', price: 120, image: 'https://images.unsplash.com/photo-1580052614034-c55d20b6cb78?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=600', category: 'Groceries' }
-//     ],
-//     offers: [
-//         { id: 1, title: '50% Off On Smoothies', image: 'https://images.unsplash.com/photo-1600718374662-0483d2b9da44?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=1200' },
-//     ],
-//     orderHistory: [
-//          { id: 'FOT54321', items: 'Berry Blast Bowl', date: '2025-08-22', status: 'Delivered', price: 180 },
-//          { id: 'FOT54320', items: 'Tropical Fruit Bowl, Avocado Smoothie', date: '2025-08-20', status: 'Delivered', price: 350 },
-//     ],
-//     subscriptions: [
-//         { id: 1, name: 'Weekly Fruit Bowl', status: 'Active', nextDelivery: '2025-08-25' },
-//         { id: 2, name: 'Monthly Smoothie Pack', status: 'Paused', nextDelivery: 'N/A' },
-//     ],
-//     subscriptionPlans: [
-//         { name: 'Daily', price: '89', duration: '' },
-//         { name: 'Weekly', price: '666', duration: '' },
-//         { name: 'Combo Weekly', price: '1111', duration: '' },
-//         { name: 'Monthly Smoothies', price: '1400', duration: '/month' },
-//         { name: 'Monthly Fruit Bowl', price: '1999', duration: '/month' },
-//         { name: 'Combo Monthly', price: '3000', duration: '/month', bestValue: true },
-//     ],
-//     faqs: [
-//         { q: 'How does the subscription work?', a: 'You can subscribe to weekly or monthly plans. We deliver fresh items to your doorstep every morning.' },
-//         { q: 'Can I customize my fruit bowl?', a: 'Yes, customization options are available on the product page before adding to the cart.' },
-//     ]
-// };

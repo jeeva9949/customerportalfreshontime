@@ -87,10 +87,10 @@ export default function App() {
                 fetch(`${API_URL}/payments`, { headers: authHeader }),
                 fetch(`${API_URL}/support`, { headers: authHeader }),
                 fetch(`${API_URL}/password-requests`, { headers: authHeader }),
-                fetch(`${API_URL}/products`), // Public route
-                fetch(`${API_URL}/products/categories`), // Public route
-                fetch(`${API_URL}/subscriptions/plans`), // Public route
-                fetch(`${API_URL}/orders`, { headers: authHeader }) // Protected route
+                fetch(`${API_URL}/products`),
+                fetch(`${API_URL}/products/categories`),
+                fetch(`${API_URL}/subscriptions/plans`),
+                fetch(`${API_URL}/orders`, { headers: authHeader })
             ]);
             
             const checkResponse = async (res, setter) => {
@@ -239,6 +239,8 @@ export default function App() {
     const handleUpdateProduct = useCallback((productData) => apiRequest(`/products/${productData.id}`, 'PUT', productData), [apiRequest]);
     const handleDeleteProduct = useCallback((id) => requestConfirmation('Delete Product?', 'This cannot be undone.', () => apiRequest(`/products/${id}`, 'DELETE')), [apiRequest, requestConfirmation]);
     const handleAddCategory = useCallback((categoryData) => apiRequest('/products/categories', 'POST', categoryData), [apiRequest]);
+    const handleAddSubscriptionPlan = useCallback((planData) => apiRequest('/subscriptions/plans', 'POST', planData), [apiRequest]);
+    const handleUpdateSubscriptionPlan = useCallback((planData) => apiRequest(`/subscriptions/plans/${planData.id}`, 'PUT', planData), [apiRequest]);
 
 
     const renderView = () => {
@@ -248,14 +250,16 @@ export default function App() {
                             onLogout={handleLogout} 
                             customers={customers} agents={agents} deliveries={deliveries} payments={payments} 
                             supportTickets={supportTickets} passwordRequests={passwordRequests} 
+                            products={products} categories={categories} orders={orders} subscriptionPlans={subscriptionPlans}
                             onAddCustomer={handleAddCustomer} onUpdateCustomer={handleUpdateCustomer} onDeleteCustomer={handleDeleteCustomer} 
                             onAddAgent={handleAddAgent} onUpdateAgent={handleUpdateAgent} onDeleteAgent={handleDeleteAgent}
                             onCreateDelivery={handleCreateDelivery} onUpdateDelivery={handleUpdateDelivery} onDeleteDelivery={handleDeleteDelivery}
                             onAddPayment={handleAddPayment} onUpdatePayment={handleUpdatePayment} onDeletePayment={handleDeletePayment}
                             onResolveTicket={handleResolveTicket} onApprovePassword={handleApprovePassword}
-                            products={products} categories={categories} orders={orders}
                             onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct}
-                            onAddCategory={handleAddCategory}
+                            onAddCategory={handleAddCategory} 
+                            onAddSubscriptionPlan={handleAddSubscriptionPlan} 
+                            onUpdateSubscriptionPlan={handleUpdateSubscriptionPlan}
                             ModalComponent={Modal}
                         />;
             case 'agent_portal':
