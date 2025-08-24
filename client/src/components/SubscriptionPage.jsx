@@ -1,72 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
-const API_URL = 'http://localhost:5000/api';
+const SubscriptionPage = ({ subscriptionPlans = [], activeSubscriptions = [], onSelectPlan = () => {} }) => {
 
-const SubscriptionPage = () => {
-    const [plans, setPlans] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        const fetchPlans = async () => {
-            try {
-                const response = await fetch(`${API_URL}/subscriptions/plans`);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch subscription plans.');
-                }
-                let data = await response.json();
-
-                // Add benefits data to each plan from the backend
-                // If your backend doesn't provide benefits, we can map them here
-                const plansWithBenefits = data.map(plan => {
-                    if (plan.name.toLowerCase().includes('premium')) {
-                        return {
-                            ...plan,
-                            tag: 'Best for Health Goals',
-                            benefits: [
-                                'Exotic Bowl included',
-                                'Protein Bowl included',
-                                'Custom Bowl options',
-                                'Priority delivery',
-                                'Nutrition consultation'
-                            ]
-                        };
-                    }
-                    if (plan.name.toLowerCase().includes('classic')) {
-                         return {
-                            ...plan,
-                            tag: 'Everyday Nutrition Choice',
-                            benefits: [
-                                'Classic Bowl included',
-                                'Vitamin Bowl included',
-                                'Salad Bowl included',
-                                'Flexible delivery',
-                                'Health tracking'
-                            ]
-                        };
-                    }
-                    // Default benefits for other plans
-                    return {
-                        ...plan,
-                        tag: 'Great Value',
-                        benefits: [
-                            'Daily Fresh Bowls',
-                            'Standard delivery',
-                            'Cancel anytime'
-                        ]
-                    };
-                });
-                
-                setPlans(plansWithBenefits);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
+    const getPlansWithBenefits = (plans) => {
+        return plans.map(plan => {
+            if (plan.name.toLowerCase().includes('premium')) {
+                return {
+                    ...plan,
+                    tag: 'Best for Health Goals',
+                    benefits: [
+                        'Exotic Bowl included',
+                        'Protein Bowl included',
+                        'Custom Bowl options',
+                        'Priority delivery',
+                        'Nutrition consultation'
+                    ]
+                };
             }
-        };
+            if (plan.name.toLowerCase().includes('classic')) {
+                 return {
+                    ...plan,
+                    tag: 'Everyday Nutrition Choice',
+                    benefits: [
+                        'Classic Bowl included',
+                        'Vitamin Bowl included',
+                        'Salad Bowl included',
+                        'Flexible delivery',
+                        'Health tracking'
+                    ]
+                };
+            }
+            return {
+                ...plan,
+                tag: 'Great Value',
+                benefits: [
+                    'Daily Fresh Bowls',
+                    'Standard delivery',
+                    'Cancel anytime'
+                ]
+            };
+        });
+    };
 
-        fetchPlans();
-    }, []);
+    const plans = getPlansWithBenefits(subscriptionPlans);
 
     const whatsInside = {
         "Fruit-based Smoothies": ["Classic Banana", "Mango", "Pineapple", "Strawberry", "Watermelon", "Apple", "Orange", "Grapes", "Guava Freshness", "Kiwi Kick", "Sapota Shake", "Lichi", "Custard Apple", "Pomegranate", "Mixed Fruit Blast", "Seasonal Special"],
@@ -81,23 +57,29 @@ const SubscriptionPage = () => {
         { title: 'Fast Delivery', icon: '🚚', description: 'On-time delivery, every single morning.' },
     ];
 
-    if (isLoading) {
-        return <div className="text-center py-20">Loading plans...</div>;
-    }
-
-    if (error) {
-        return <div className="text-center py-20 text-red-500">Error: {error}</div>;
-    }
-
     return (
-        <section className="py-20 bg-gray-50">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold text-gray-800">Monthly Packs</h2>
+        <div className="animate-fade-in">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">My Subscriptions</h1>
+            <div className="space-y-4">
+                {activeSubscriptions.length > 0 ? (
+                    activeSubscriptions.map(sub => (
+                        <div key={sub.id} className="bg-white p-4 rounded-xl shadow-sm">
+                            <p className="font-bold">{sub.SubscriptionPlan.name}</p>
+                            <p className="text-sm text-gray-600">Status: <span className="font-semibold text-green-600">{sub.status}</span></p>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-center text-gray-500 py-10 bg-white rounded-xl shadow-sm">You have no active subscriptions.</p>
+                )}
+            </div>
+
+            <div className="mt-12">
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-800">Explore Our Subscription Plans</h2>
                     <p className="text-gray-600 mt-2">Save more with our subscription plans</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {plans.map((plan, i) => (
                         <div key={i} className={`rounded-2xl p-8 border-2 transition-all transform hover:-translate-y-2 ${plan.bestValue ? 'border-green-500 bg-white shadow-2xl' : 'bg-white shadow-lg'}`}>
                             {plan.bestValue && <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full absolute -top-3 left-1/2 -translate-x-1/2">Most Popular</span>}
@@ -116,7 +98,7 @@ const SubscriptionPage = () => {
                                     </li>
                                 ))}
                             </ul>
-                            <button className={`w-full py-3 rounded-lg font-semibold transition-all ${plan.bestValue ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
+                            <button onClick={() => onSelectPlan(plan)} className={`w-full py-3 rounded-lg font-semibold transition-all ${plan.bestValue ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
                                 Choose {plan.name}
                             </button>
                         </div>
@@ -149,9 +131,8 @@ const SubscriptionPage = () => {
                         ))}
                      </div>
                 </div>
-
             </div>
-        </section>
+        </div>
     );
 };
 

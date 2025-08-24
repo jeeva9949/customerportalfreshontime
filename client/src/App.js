@@ -62,6 +62,7 @@ export default function App() {
     const [categories, setCategories] = useState([]);
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [activeSubscriptions, setActiveSubscriptions] = useState([]);
 
     const [confirmState, setConfirmState] = useState({ isOpen: false });
 
@@ -79,7 +80,7 @@ export default function App() {
             const authHeader = { 'Authorization': `Bearer ${currentToken}` };
             const [
                 customersRes, agentsRes, deliveriesRes, paymentsRes, supportRes, passwordRes,
-                productsRes, categoriesRes, subPlansRes, ordersRes
+                productsRes, categoriesRes, subPlansRes, ordersRes, activeSubsRes
             ] = await Promise.all([
                 fetch(`${API_URL}/customers`, { headers: authHeader }),
                 fetch(`${API_URL}/agents`, { headers: authHeader }),
@@ -90,7 +91,8 @@ export default function App() {
                 fetch(`${API_URL}/products`),
                 fetch(`${API_URL}/products/categories`),
                 fetch(`${API_URL}/subscriptions/plans`),
-                fetch(`${API_URL}/orders`, { headers: authHeader })
+                fetch(`${API_URL}/orders`, { headers: authHeader }),
+                fetch(`${API_URL}/subscriptions/my-subscriptions`, { headers: authHeader })
             ]);
             
             const checkResponse = async (res, setter) => {
@@ -107,6 +109,7 @@ export default function App() {
             await checkResponse(categoriesRes, setCategories);
             await checkResponse(subPlansRes, setSubscriptionPlans);
             await checkResponse(ordersRes, setOrders);
+            await checkResponse(activeSubsRes, setActiveSubscriptions);
 
         } catch (error) {
             console.error("Fetch data error:", error);
@@ -149,6 +152,7 @@ export default function App() {
         socket.on('categories_updated', refetch);
         socket.on('orders_updated', refetch);
         socket.on('subscription_plans_updated', refetch);
+        socket.on('subscriptions_updated', refetch);
         return () => socket.disconnect();
     }, [token, loggedInUser, fetchData]);
 
@@ -241,6 +245,15 @@ export default function App() {
     const handleAddCategory = useCallback((categoryData) => apiRequest('/products/categories', 'POST', categoryData), [apiRequest]);
     const handleAddSubscriptionPlan = useCallback((planData) => apiRequest('/subscriptions/plans', 'POST', planData), [apiRequest]);
     const handleUpdateSubscriptionPlan = useCallback((planData) => apiRequest(`/subscriptions/plans/${planData.id}`, 'PUT', planData), [apiRequest]);
+    const handleSubscribe = useCallback((planId) => apiRequest('/subscriptions/subscribe', 'POST', { planId }), [apiRequest]);
+    const handleUpdateCustomerAddress = useCallback((addressData) => {
+        if (loggedInUser && loggedInUser.id) {
+            apiRequest(`/customers/${loggedInUser.id}`, 'PUT', { address: addressData });
+        } else {
+            console.error("User not logged in, cannot update address.");
+            alert("Error: You must be logged in to update your address.");
+        }
+    }, [apiRequest, loggedInUser]);
 
 
     const renderView = () => {
@@ -278,9 +291,12 @@ export default function App() {
                             user={loggedInUser} 
                             onLogout={handleLogout}
                             onCreateOrder={handleCreateOrder}
+                            onSubscribe={handleSubscribe}
+                            onUpdateAddress={handleUpdateCustomerAddress}
                             products={products}
                             categories={categories}
                             subscriptionPlans={subscriptionPlans}
+                            activeSubscriptions={activeSubscriptions}
                             orders={orders}
                         />;
             case 'landing_page':

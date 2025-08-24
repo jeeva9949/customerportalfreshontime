@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SubscriptionPage from './SubscriptionPage'; // Import the dedicated SubscriptionPage component
 
 // --- Helper Components ---
@@ -31,13 +31,116 @@ const CategoryIcon = ({ category, isActive, onClick }) => (
     </button>
 );
 
+// --- New Subscription Checkout Modal ---
+const SubscriptionCheckoutModal = ({ plan, user, onConfirm, onClose }) => {
+    const [address, setAddress] = useState(user?.address || '');
+    const [paymentMethod, setPaymentMethod] = useState('UPI');
+    const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+    const handleUseCurrentLocation = () => {
+        if (navigator.geolocation) {
+            setIsFetchingLocation(true);
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    
+                    // --- Reverse Geocoding ---
+                    // In a real application, you would use a service like Google Maps Geocoding API.
+                    // This is a placeholder that simulates an API call.
+                    try {
+                        // const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=YOUR_API_KEY`);
+                        // const data = await response.json();
+                        // if (data.results && data.results[0]) {
+                        //     setAddress(data.results[0].formatted_address);
+                        // } else {
+                        //     setAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);
+                        // }
+                        
+                        // Placeholder address for demonstration:
+                        setAddress('123 FreshOnTime Street, Anantapur, Andhra Pradesh 515001');
+
+                    } catch (error) {
+                        alert('Could not convert coordinates to an address. Please enter it manually.');
+                        setAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);
+                    } finally {
+                        setIsFetchingLocation(false);
+                    }
+                },
+                (error) => {
+                    alert('Could not get your location. Please enable location services and try again.');
+                    console.error("Geolocation error:", error);
+                    setIsFetchingLocation(false);
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by this browser.');
+        }
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!address) {
+            alert('Please enter a delivery address.');
+            return;
+        }
+        onConfirm(address);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-40 flex justify-center items-center">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md animate-scale-in">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-gray-800">Confirm Subscription</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-4">
+                        <h4 className="font-bold text-lg">{plan?.name}</h4>
+                        <p className="text-2xl font-bold text-green-600">₹{plan?.price}<span className="text-base font-medium text-gray-500">{plan?.duration}</span></p>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
+                        <textarea
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                            placeholder="Enter your full delivery address"
+                            rows="3"
+                            required
+                        />
+                        <button type="button" onClick={handleUseCurrentLocation} className="mt-2 text-sm text-pink-500 font-semibold hover:underline" disabled={isFetchingLocation}>
+                            {isFetchingLocation ? 'Fetching Location...' : '📍 Use My Current Location'}
+                        </button>
+                    </div>
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                        <select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            className="p-2 border border-gray-300 rounded-md w-full"
+                        >
+                            <option>UPI</option>
+                            <option>Card</option>
+                            <option>Wallet</option>
+                            <option>Cash on Delivery (COD)</option>
+                        </select>
+                    </div>
+                    <button type="submit" className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-colors">
+                        Confirm & Pay
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 // --- Page Components ---
 
 const DashboardHomePage = ({ user, products, categories, onAddToCart }) => {
     const [activeCategory, setActiveCategory] = useState('All Items');
     
-    const categoryList = [{ name: 'All Items', icon: '💖' }, ...categories.map(c => ({...c, icon: '🥗'}))];
+    const categoryList = [{ name: 'All Items', icon: '💖' }, ...(categories || []).map(c => ({...c, icon: '🥗'}))];
 
     const filteredItems = activeCategory === 'All Items' 
         ? products 
@@ -52,7 +155,7 @@ const DashboardHomePage = ({ user, products, categories, onAddToCart }) => {
 
     return (
         <AnimatedPage className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-800">{getGreeting()}, {user.name} 👋</h1>
+            <h1 className="text-2xl font-bold text-gray-800">{getGreeting()}, {user?.name} 👋</h1>
             
             <div className="bg-gradient-to-r from-green-500 to-teal-400 text-white p-6 rounded-2xl shadow-lg">
                 <h2 className="text-xl font-bold">50% Off On Smoothies</h2>
@@ -77,7 +180,7 @@ const DashboardHomePage = ({ user, products, categories, onAddToCart }) => {
             <div>
                 <h3 className="text-lg font-bold text-gray-800 mb-3">{activeCategory}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filteredItems.length > 0 ? (
+                    {filteredItems && filteredItems.length > 0 ? (
                         filteredItems.slice(0, 5).map(p => <ProductCard key={p.id} product={p} onAddToCart={onAddToCart} />)
                     ) : (
                         <p className="text-center text-gray-500 py-10 col-span-full">No items in this category yet.</p>
@@ -91,7 +194,7 @@ const DashboardHomePage = ({ user, products, categories, onAddToCart }) => {
 const MenuPage = ({ products, categories, onAddToCart }) => {
     const [activeCategory, setActiveCategory] = useState('All Items');
     
-    const categoryList = [{ name: 'All Items', icon: '💖' }, ...categories.map(c => ({...c, icon: '🥗'}))];
+    const categoryList = [{ name: 'All Items', icon: '💖' }, ...(categories || []).map(c => ({...c, icon: '🥗'}))];
 
     const filteredItems = activeCategory === 'All Items' 
         ? products 
@@ -113,7 +216,7 @@ const MenuPage = ({ products, categories, onAddToCart }) => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredItems.length > 0 ? (
+                {filteredItems && filteredItems.length > 0 ? (
                     filteredItems.map(p => <ProductCard key={p.id} product={p} onAddToCart={onAddToCart} />)
                 ) : (
                     <p className="text-center text-gray-500 py-10 col-span-full">No items in this category yet.</p>
@@ -190,10 +293,10 @@ const ProfilePage = ({ user, onNavigate }) => (
         <h1 className="text-2xl font-bold text-gray-800 mb-4">My Profile</h1>
         <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">
             <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center text-3xl font-bold">{user.name.charAt(0)}</div>
+                <div className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center text-3xl font-bold">{user?.name.charAt(0)}</div>
                 <div>
-                    <h2 className="text-xl font-bold">{user.name}</h2>
-                    <p className="text-gray-500">{user.email}</p>
+                    <h2 className="text-xl font-bold">{user?.name}</h2>
+                    <p className="text-gray-500">{user?.email}</p>
                 </div>
             </div>
             <div className="space-y-2 pt-4">
@@ -207,9 +310,11 @@ const ProfilePage = ({ user, onNavigate }) => (
 
 // --- Main Customer Portal Component ---
 
-export default function CustomerPortal({ user, onLogout, onCreateOrder, products, categories, subscriptionPlans, orders }) {
+export default function CustomerPortal({ user, onLogout, onCreateOrder, onSubscribe, onUpdateAddress, products, categories, subscriptionPlans, activeSubscriptions, orders }) {
     const [activeTab, setActiveTab] = useState('home');
     const [cart, setCart] = useState([]);
+    const [selectedPlan, setSelectedPlan] = useState(null);
+    const [isSubCheckoutOpen, setIsSubCheckoutOpen] = useState(false);
 
     const handleAddToCart = (product) => {
         setCart(prevCart => {
@@ -243,13 +348,25 @@ export default function CustomerPortal({ user, onLogout, onCreateOrder, products
         setActiveTab('orders'); // Navigate to orders page
     };
 
+    const handleSelectPlan = (plan) => {
+        setSelectedPlan(plan);
+        setIsSubCheckoutOpen(true);
+    };
+
+    const handleConfirmSubscription = async (address) => {
+        await onUpdateAddress(address);
+        await onSubscribe(selectedPlan.id);
+        setIsSubCheckoutOpen(false);
+        setSelectedPlan(null);
+    };
+
     const renderContent = () => {
         switch (activeTab) {
             case 'home': return <DashboardHomePage user={user} products={products} categories={categories} onAddToCart={handleAddToCart} />;
             case 'menu': return <MenuPage products={products} categories={categories} onAddToCart={handleAddToCart} />;
             case 'cart': return <CartPage cart={cart} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} />;
             case 'orders': return <OrdersPage orders={orders} />;
-            case 'subscriptions': return <SubscriptionPage subscriptionPlans={subscriptionPlans} />;
+            case 'subscriptions': return <SubscriptionPage subscriptionPlans={subscriptionPlans} activeSubscriptions={activeSubscriptions} onSelectPlan={handleSelectPlan} />;
             case 'profile': return <ProfilePage user={user} onNavigate={setActiveTab} />;
             default: return <DashboardHomePage user={user} products={products} categories={categories} onAddToCart={handleAddToCart} />;
         }
@@ -276,6 +393,14 @@ export default function CustomerPortal({ user, onLogout, onCreateOrder, products
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
+            {isSubCheckoutOpen && (
+                <SubscriptionCheckoutModal 
+                    plan={selectedPlan}
+                    user={user}
+                    onConfirm={handleConfirmSubscription}
+                    onClose={() => setIsSubCheckoutOpen(false)}
+                />
+            )}
             <header className="sticky top-0 bg-white/80 backdrop-blur-sm z-20 shadow-sm">
                 <div className="p-4 flex justify-between items-center max-w-6xl mx-auto">
                     <div className="flex items-center gap-2">
