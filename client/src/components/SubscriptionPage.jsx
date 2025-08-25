@@ -1,44 +1,105 @@
 import React from 'react';
+import { format, differenceInDays } from 'date-fns';
 
-const SubscriptionPage = ({ subscriptionPlans = [], activeSubscriptions = [], onSelectPlan = () => {} }) => {
+// --- NEW Helper Components for Subscription Management ---
 
+const StatusBadge = ({ status }) => {
+    const styles = {
+        active: 'bg-green-100 text-green-800',
+        paused: 'bg-yellow-100 text-yellow-800',
+        cancelled: 'bg-red-100 text-red-800',
+        expired: 'bg-gray-100 text-gray-800',
+    };
+    return (
+        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${styles[status] || styles.expired}`}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
+    );
+};
+
+const ProgressBar = ({ total, current }) => {
+    const percentage = Math.max(0, Math.min(100, (current / total) * 100));
+    return (
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
+        </div>
+    );
+};
+
+const InfoItem = ({ label, value }) => (
+    <div>
+        <p className="text-xs text-gray-500">{label}</p>
+        <p className="font-semibold text-gray-800">{value}</p>
+    </div>
+);
+
+const SubscriptionCard = ({ sub, onPause, onResume, onCancel, onRenew }) => {
+    const { SubscriptionPlan: plan } = sub;
+    const today = new Date();
+    const startDate = new Date(sub.startDate);
+    const endDate = new Date(sub.endDate);
+
+    const totalDurationDays = differenceInDays(endDate, startDate) || 1;
+    const daysPassed = differenceInDays(today, startDate);
+    const daysLeft = Math.max(0, differenceInDays(endDate, today));
+    
+    const canRenew = daysLeft <= 3 && sub.status === 'active';
+
+    return (
+        <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100 flex flex-col gap-4">
+            <div className="flex justify-between items-start">
+                <div>
+                    <h3 className="font-bold text-lg text-gray-900">{plan?.name || 'Subscription Plan'}</h3>
+                    <p className="text-green-600 font-bold">₹{plan?.price || '0.00'}</p>
+                </div>
+                <StatusBadge status={sub.status} />
+            </div>
+            <div>
+                <div className="flex justify-between items-center mb-1 text-sm">
+                    <span className="text-gray-600">Days Left</span>
+                    <span className="font-bold text-green-600">{daysLeft}</span>
+                </div>
+                <ProgressBar total={totalDurationDays} current={daysPassed} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-b border-gray-100 py-4">
+                <InfoItem label="Start Date" value={format(startDate, 'MMM dd, yyyy')} />
+                <InfoItem label="End Date" value={format(endDate, 'MMM dd, yyyy')} />
+                <InfoItem label="Next Delivery" value={sub.status === 'active' ? 'Tomorrow' : 'Paused'} />
+                <InfoItem label="Plan ID" value={`#${sub.id}`} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {sub.status === 'active' && <button onClick={() => onPause(sub.id)} className="flex-1 bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600">Pause</button>}
+                {sub.status === 'paused' && <button onClick={() => onResume(sub.id)} className="flex-1 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600">Resume</button>}
+                {sub.status !== 'cancelled' && sub.status !== 'expired' && <button onClick={() => onCancel(sub.id)} className="flex-1 bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600">Cancel Next Cycle</button>}
+                {canRenew && <button onClick={() => onRenew(sub.id)} className="flex-1 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600">Renew Now</button>}
+            </div>
+        </div>
+    );
+};
+
+// --- Main Subscription Page Component ---
+
+const SubscriptionPage = ({ 
+    subscriptionPlans = [], 
+    activeSubscriptions = [], 
+    onSelectPlan = () => {},
+    // NEW props for management
+    onPause = () => {}, 
+    onResume = () => {}, 
+    onCancel = () => {}, 
+    onRenew = () => {} 
+}) => {
+
+    // --- EXISTING CODE FROM YOUR FILE (NO CHANGES) ---
     const getPlansWithBenefits = (plans) => {
         return plans.map(plan => {
             if (plan.name.toLowerCase().includes('premium')) {
-                return {
-                    ...plan,
-                    tag: 'Best for Health Goals',
-                    benefits: [
-                        'Exotic Bowl included',
-                        'Protein Bowl included',
-                        'Custom Bowl options',
-                        'Priority delivery',
-                        'Nutrition consultation'
-                    ]
-                };
+                return { ...plan, tag: 'Best for Health Goals', benefits: ['Exotic Bowl included', 'Protein Bowl included', 'Custom Bowl options', 'Priority delivery', 'Nutrition consultation'] };
             }
             if (plan.name.toLowerCase().includes('classic')) {
-                 return {
-                    ...plan,
-                    tag: 'Everyday Nutrition Choice',
-                    benefits: [
-                        'Classic Bowl included',
-                        'Vitamin Bowl included',
-                        'Salad Bowl included',
-                        'Flexible delivery',
-                        'Health tracking'
-                    ]
-                };
+                 return { ...plan, tag: 'Everyday Nutrition Choice', benefits: ['Classic Bowl included', 'Vitamin Bowl included', 'Salad Bowl included', 'Flexible delivery', 'Health tracking'] };
             }
-            return {
-                ...plan,
-                tag: 'Great Value',
-                benefits: [
-                    'Daily Fresh Bowls',
-                    'Standard delivery',
-                    'Cancel anytime'
-                ]
-            };
+            return { ...plan, tag: 'Great Value', benefits: ['Daily Fresh Bowls', 'Standard delivery', 'Cancel anytime'] };
         });
     };
 
@@ -59,20 +120,26 @@ const SubscriptionPage = ({ subscriptionPlans = [], activeSubscriptions = [], on
 
     return (
         <div className="animate-fade-in">
+            {/* --- NEW: Subscription Management Section --- */}
             <h1 className="text-2xl font-bold text-gray-800 mb-4">My Subscriptions</h1>
-            <div className="space-y-4">
-                {activeSubscriptions.length > 0 ? (
+            <div className="space-y-6">
+                {activeSubscriptions && activeSubscriptions.length > 0 ? (
                     activeSubscriptions.map(sub => (
-                        <div key={sub.id} className="bg-white p-4 rounded-xl shadow-sm">
-                            <p className="font-bold">{sub.SubscriptionPlan.name}</p>
-                            <p className="text-sm text-gray-600">Status: <span className="font-semibold text-green-600">{sub.status}</span></p>
-                        </div>
+                        <SubscriptionCard 
+                            key={sub.id} 
+                            sub={sub}
+                            onPause={onPause}
+                            onResume={onResume}
+                            onCancel={onCancel}
+                            onRenew={onRenew}
+                        />
                     ))
                 ) : (
                     <p className="text-center text-gray-500 py-10 bg-white rounded-xl shadow-sm">You have no active subscriptions.</p>
                 )}
             </div>
 
+            {/* --- EXISTING CODE FROM YOUR FILE (NO CHANGES) --- */}
             <div className="mt-12">
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-800">Explore Our Subscription Plans</h2>
@@ -91,9 +158,7 @@ const SubscriptionPage = ({ subscriptionPlans = [], activeSubscriptions = [], on
                             <ul className="space-y-3 text-gray-600 mb-8">
                                 {plan.benefits.map((benefit, j) => (
                                     <li key={j} className="flex items-center">
-                                        <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                        </svg>
+                                        <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                                         {benefit}
                                     </li>
                                 ))}

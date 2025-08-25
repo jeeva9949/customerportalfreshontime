@@ -12,7 +12,8 @@ module.exports = (sequelize, DataTypes) => {
     planId: DataTypes.INTEGER,
     startDate: DataTypes.DATE,
     endDate: DataTypes.DATE,
-    status: DataTypes.ENUM('active', 'paused', 'cancelled', 'expired')
+    status: DataTypes.ENUM('active', 'paused', 'cancelled', 'expired'),
+    pausedAt: DataTypes.DATE // This is the new field you are adding.
   }, {
     sequelize,
     modelName: 'Subscription',

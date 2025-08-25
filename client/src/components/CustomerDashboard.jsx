@@ -44,7 +44,6 @@ const SubscriptionCheckoutModal = ({ plan, user, onConfirm, onClose }) => {
                 async (position) => {
                     const { latitude, longitude } = position.coords;
                     
-                    // --- Real Reverse Geocoding using OpenStreetMap ---
                     try {
                         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
                         const data = await response.json();
@@ -304,7 +303,12 @@ const ProfilePage = ({ user, onNavigate }) => (
 
 // --- Main Customer Portal Component ---
 
-export default function CustomerPortal({ user, onLogout, onCreateOrder, onSubscribe, onUpdateAddress, products, categories, subscriptionPlans, activeSubscriptions, orders }) {
+export default function CustomerPortal({ 
+    user, onLogout, onCreateOrder, onSubscribe, onUpdateAddress, 
+    products, categories, subscriptionPlans, activeSubscriptions, orders,
+    // NEW props from App.js
+    onPauseSubscription, onResumeSubscription, onCancelSubscription, onRenewSubscription 
+}) {
     const [activeTab, setActiveTab] = useState('home');
     const [cart, setCart] = useState([]);
     const [selectedPlan, setSelectedPlan] = useState(null);
@@ -360,7 +364,17 @@ export default function CustomerPortal({ user, onLogout, onCreateOrder, onSubscr
             case 'menu': return <MenuPage products={products} categories={categories} onAddToCart={handleAddToCart} />;
             case 'cart': return <CartPage cart={cart} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} />;
             case 'orders': return <OrdersPage orders={orders} />;
-            case 'subscriptions': return <SubscriptionPage subscriptionPlans={subscriptionPlans} activeSubscriptions={activeSubscriptions} onSelectPlan={handleSelectPlan} />;
+            case 'subscriptions': 
+                return <SubscriptionPage 
+                    subscriptionPlans={subscriptionPlans} 
+                    activeSubscriptions={activeSubscriptions} 
+                    onSelectPlan={handleSelectPlan} 
+                    // Pass the new handlers down to the SubscriptionPage
+                    onPause={onPauseSubscription}
+                    onResume={onResumeSubscription}
+                    onCancel={onCancelSubscription}
+                    onRenew={onRenewSubscription}
+                />;
             case 'profile': return <ProfilePage user={user} onNavigate={setActiveTab} />;
             default: return <DashboardHomePage user={user} products={products} categories={categories} onAddToCart={handleAddToCart} />;
         }

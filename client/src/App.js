@@ -255,6 +255,58 @@ export default function App() {
         }
     }, [apiRequest, loggedInUser]);
 
+    // --- NEW Subscription Management Handlers ---
+    const handlePauseSubscription = async (subscriptionId) => {
+        try {
+            await fetch(`${API_URL}/subscriptions/${subscriptionId}/pause`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (error) {
+            console.error("Failed to pause subscription", error);
+            alert('Could not pause subscription. Please try again.');
+        }
+    };
+
+    const handleResumeSubscription = async (subscriptionId) => {
+        try {
+            await fetch(`${API_URL}/subscriptions/${subscriptionId}/resume`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (error) {
+            console.error("Failed to resume subscription", error);
+            alert('Could not resume subscription. Please try again.');
+        }
+    };
+
+    const handleCancelSubscription = async (subscriptionId) => {
+        if (window.confirm('Are you sure you want to cancel this subscription? This will stop it from renewing.')) {
+            try {
+                await fetch(`${API_URL}/subscriptions/${subscriptionId}/cancel`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (error) {
+                console.error("Failed to cancel subscription", error);
+                alert('Could not cancel subscription. Please try again.');
+            }
+        }
+    };
+
+    const handleRenewSubscription = async (subscriptionId) => {
+        if (window.confirm('Renew this subscription for another cycle?')) {
+            try {
+                await fetch(`${API_URL}/subscriptions/${subscriptionId}/renew`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (error) {
+                console.error("Failed to renew subscription", error);
+                alert('Could not renew subscription. Please try again.');
+            }
+        }
+    };
 
     const renderView = () => {
         switch (view) {
@@ -298,6 +350,11 @@ export default function App() {
                             subscriptionPlans={subscriptionPlans}
                             activeSubscriptions={activeSubscriptions}
                             orders={orders}
+                            // Pass new handlers down to the customer portal
+                            onPauseSubscription={handlePauseSubscription}
+                            onResumeSubscription={handleResumeSubscription}
+                            onCancelSubscription={handleCancelSubscription}
+                            onRenewSubscription={handleRenewSubscription}
                         />;
             case 'landing_page':
             default:
