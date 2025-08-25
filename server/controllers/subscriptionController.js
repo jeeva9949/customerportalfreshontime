@@ -12,6 +12,8 @@ const calculateEndDate = (startDate, duration) => {
 
 // Create a new subscription for a customer
 exports.createSubscription = async (req, res) => {
+    // The 'deliveryAddress' is received but no longer used in this function.
+    // The customer's address should be managed separately.
     const { planId } = req.body;
     const customerId = req.user.id; // From authMiddleware
 
@@ -24,6 +26,7 @@ exports.createSubscription = async (req, res) => {
         const startDate = new Date();
         const endDate = calculateEndDate(startDate, plan.duration);
 
+        // Create the new subscription without updating the customer's address
         const newSubscription = await Subscription.create({
             customerId,
             planId,
@@ -34,17 +37,21 @@ exports.createSubscription = async (req, res) => {
 
         getIO().emit('subscriptions_updated'); // Notify all clients
         res.status(201).json(newSubscription);
+
     } catch (error) {
+        console.error("Error creating subscription:", error);
         res.status(500).json({ message: 'Failed to create subscription', error: error.message });
     }
 };
 
-// Get all subscriptions for the logged-in customer
+
+// Get active subscriptions for the logged-in customer
 exports.getCustomerSubscriptions = async (req, res) => {
+    const customerId = req.user.id;
     try {
         const subscriptions = await Subscription.findAll({
-            where: { customerId: req.user.id },
-            include: [SubscriptionPlan] // Include plan details
+            where: { customerId },
+            include: [SubscriptionPlan]
         });
         res.status(200).json(subscriptions);
     } catch (error) {
@@ -75,6 +82,7 @@ exports.updateSubscriptionStatus = async (req, res) => {
             return res.status(404).json({ message: 'Subscription not found.' });
         }
 
+        // Security check: Customer can only update their own subscription
         if (req.user.role === 'Customer' && subscription.customerId !== req.user.id) {
             return res.status(403).json({ message: 'You are not authorized to update this subscription.' });
         }
@@ -82,9 +90,10 @@ exports.updateSubscriptionStatus = async (req, res) => {
         subscription.status = status;
         await subscription.save();
 
-        getIO().emit('subscriptions_updated');
+        getIO().emit('subscriptions_updated'); // Notify clients of the change
         res.status(200).json(subscription);
+
     } catch (error) {
-        res.status(500).json({ message: 'Failed to update subscription', error: error.message });
+        res.status(500).json({ message: 'Failed to update subscription status', error: error.message });
     }
 };
