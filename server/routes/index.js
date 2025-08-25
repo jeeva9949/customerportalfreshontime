@@ -11,11 +11,12 @@ const supportRoutes = require('./supportRoutes');
 const passwordRoutes = require('./passwordRoutes');
 const locationRoutes = require('./locationRoutes');
 const customerAuthRoutes = require('./customerAuthRoutes');
-
-// --- Import NEW routers ---
 const productRoutes = require('./productRoutes');
 const subscriptionPlanRoutes = require('./subscriptionPlanRoutes');
 const orderRoutes = require('./orderRoutes');
+
+// --- Import the new subscription router ---
+const subscriptionRoutes = require('./subscriptionRoutes');
 
 
 // Use the existing routers with their base paths
@@ -28,11 +29,12 @@ masterRouter.use('/support', supportRoutes);
 masterRouter.use('/password-requests', passwordRoutes);
 masterRouter.use('/locations', locationRoutes);
 masterRouter.use('/customer-auth', customerAuthRoutes);
-
-// --- Use NEW routers ---
 masterRouter.use('/products', productRoutes);
 masterRouter.use('/subscriptions', subscriptionPlanRoutes);
 masterRouter.use('/orders', orderRoutes);
+
+// --- Use the new subscription router ---
+masterRouter.use('/subscriptions', subscriptionRoutes);
 
 
 module.exports = masterRouter;

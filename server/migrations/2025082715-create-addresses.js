@@ -1,7 +1,7 @@
 'use strict';
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Subscriptions', {
+    await queryInterface.createTable('Addresses', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -12,34 +12,23 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Customers',
+          model: 'customers', // Use the actual table name 'customers'
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      planId: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'SubscriptionPlans',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE' // Corrected from SET NULL to CASCADE
-      },
-      startDate: {
-        type: Sequelize.DATE,
+      fullAddress: {
+        type: Sequelize.STRING,
         allowNull: false
       },
-      endDate: {
-        type: Sequelize.DATE,
-        allowNull: false
+      addressType: {
+        type: Sequelize.ENUM('Home', 'Work', 'Other'),
+        defaultValue: 'Home'
       },
-      status: {
-        type: Sequelize.ENUM('active', 'paused', 'cancelled', 'expired'),
-        defaultValue: 'active',
-        allowNull: false
+      isDefault: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
       },
       createdAt: {
         allowNull: false,
@@ -52,6 +41,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Subscriptions');
+    await queryInterface.dropTable('Addresses');
   }
 };

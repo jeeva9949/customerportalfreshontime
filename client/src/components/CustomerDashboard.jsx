@@ -44,21 +44,15 @@ const SubscriptionCheckoutModal = ({ plan, user, onConfirm, onClose }) => {
                 async (position) => {
                     const { latitude, longitude } = position.coords;
                     
-                    // --- Reverse Geocoding ---
-                    // In a real application, you would use a service like Google Maps Geocoding API.
-                    // This is a placeholder that simulates an API call.
+                    // --- Real Reverse Geocoding using OpenStreetMap ---
                     try {
-                        // const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=YOUR_API_KEY`);
-                        // const data = await response.json();
-                        // if (data.results && data.results[0]) {
-                        //     setAddress(data.results[0].formatted_address);
-                        // } else {
-                        //     setAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);
-                        // }
-                        
-                        // Placeholder address for demonstration:
-                        setAddress('123 FreshOnTime Street, Anantapur, Andhra Pradesh 515001');
-
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
+                        const data = await response.json();
+                        if (data && data.display_name) {
+                            setAddress(data.display_name);
+                        } else {
+                            setAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);
+                        }
                     } catch (error) {
                         alert('Could not convert coordinates to an address. Please enter it manually.');
                         setAddress(`Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`);

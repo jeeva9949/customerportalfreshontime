@@ -75,7 +75,6 @@ exports.updateSubscriptionStatus = async (req, res) => {
             return res.status(404).json({ message: 'Subscription not found.' });
         }
 
-        // Optional: Add ownership check for customers
         if (req.user.role === 'Customer' && subscription.customerId !== req.user.id) {
             return res.status(403).json({ message: 'You are not authorized to update this subscription.' });
         }
