@@ -1,7 +1,7 @@
 const express = require('express');
 const masterRouter = express.Router();
 
-// Import existing routers
+// Import all routers
 const authRoutes = require('./authRoutes');
 const agentRoutes = require('./agentRoutes');
 const customerRoutes = require('./customerRoutes');
@@ -12,14 +12,11 @@ const passwordRoutes = require('./passwordRoutes');
 const locationRoutes = require('./locationRoutes');
 const customerAuthRoutes = require('./customerAuthRoutes');
 const productRoutes = require('./productRoutes');
-const subscriptionPlanRoutes = require('./subscriptionPlanRoutes');
 const orderRoutes = require('./orderRoutes');
+const subscriptionRoutes = require('./subscriptionRoutes'); 
+const subscriptionAdminRoutes = require('./subscriptionAdminRoutes'); // Your separate admin routes
 
-// --- Import the new subscription router ---
-const subscriptionRoutes = require('./subscriptionRoutes');
-
-
-// Use the existing routers with their base paths
+// Use the routers with their base paths
 masterRouter.use('/auth', authRoutes);
 masterRouter.use('/agents', agentRoutes);
 masterRouter.use('/customers', customerRoutes);
@@ -30,11 +27,13 @@ masterRouter.use('/password-requests', passwordRoutes);
 masterRouter.use('/locations', locationRoutes);
 masterRouter.use('/customer-auth', customerAuthRoutes);
 masterRouter.use('/products', productRoutes);
-masterRouter.use('/subscriptions', subscriptionPlanRoutes);
 masterRouter.use('/orders', orderRoutes);
 
-// --- Use the new subscription router ---
+// Use the general subscription router for '/subscriptions'
 masterRouter.use('/subscriptions', subscriptionRoutes);
+
+// Use the admin-specific router for '/admin'
+masterRouter.use('/admin', subscriptionAdminRoutes);
 
 
 module.exports = masterRouter;

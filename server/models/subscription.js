@@ -5,6 +5,8 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Subscription.belongsTo(models.Customer, { foreignKey: 'customerId' });
       Subscription.belongsTo(models.SubscriptionPlan, { foreignKey: 'planId' });
+      // A subscription can be paused multiple times
+      Subscription.hasMany(models.PauseHistory, { foreignKey: 'subscriptionId' });
     }
   }
   Subscription.init({
@@ -13,7 +15,8 @@ module.exports = (sequelize, DataTypes) => {
     startDate: DataTypes.DATE,
     endDate: DataTypes.DATE,
     status: DataTypes.ENUM('active', 'paused', 'cancelled', 'expired'),
-    pausedAt: DataTypes.DATE // This is the new field you are adding.
+    pausedAt: DataTypes.DATE,
+    nextDeliveryDate: DataTypes.DATE // New field
   }, {
     sequelize,
     modelName: 'Subscription',

@@ -1,8 +1,3 @@
-// ====================================================
-// --- File: server/models/index.js ---
-// ====================================================
-// This file correctly loads the database configuration and all models.
-
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -30,10 +25,17 @@ fs
     );
   })
   .forEach(file => {
-    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
-    db[model.name] = model;
+    try {
+      const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
+      db[model.name] = model;
+    } catch (error) {
+      console.error(`Error loading model from file: ${file}`);
+      console.error(error);
+    }
   });
 
+// This loop runs AFTER all models have been loaded into the 'db' object.
+// This ensures that when .associate is called, all other models are available.
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

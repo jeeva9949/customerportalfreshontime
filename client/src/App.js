@@ -255,7 +255,7 @@ export default function App() {
         }
     }, [apiRequest, loggedInUser]);
 
-    // --- NEW Subscription Management Handlers ---
+    // --- Customer Subscription Management Handlers ---
     const handlePauseSubscription = async (subscriptionId) => {
         try {
             await fetch(`${API_URL}/subscriptions/${subscriptionId}/pause`, {
@@ -308,6 +308,21 @@ export default function App() {
         }
     };
 
+    // --- NEW ADMIN Subscription Management Handlers ---
+    const handleAdminPauseSubscription = async (subscriptionId) => {
+        await apiRequest(`/admin/subscriptions/${subscriptionId}/pause`, 'PUT');
+    };
+
+    const handleAdminResumeSubscription = async (subscriptionId) => {
+        await apiRequest(`/admin/subscriptions/${subscriptionId}/resume`, 'PUT');
+    };
+
+    const handleAdminCancelSubscription = async (subscriptionId) => {
+        requestConfirmation('Cancel Subscription?', 'This will mark the subscription as cancelled and it will not renew.', () => 
+            apiRequest(`/admin/subscriptions/${subscriptionId}/cancel`, 'PUT')
+        );
+    };
+
     const renderView = () => {
         switch (view) {
             case 'admin_dashboard':
@@ -326,6 +341,10 @@ export default function App() {
                             onAddSubscriptionPlan={handleAddSubscriptionPlan} 
                             onUpdateSubscriptionPlan={handleUpdateSubscriptionPlan}
                             ModalComponent={Modal}
+                            // Add these three new props below
+                            onAdminPauseSubscription={handleAdminPauseSubscription}
+                            onAdminResumeSubscription={handleAdminResumeSubscription}
+                            onAdminCancelSubscription={handleAdminCancelSubscription}
                         />;
             case 'agent_portal':
                 return <AgentPortal 
@@ -350,7 +369,6 @@ export default function App() {
                             subscriptionPlans={subscriptionPlans}
                             activeSubscriptions={activeSubscriptions}
                             orders={orders}
-                            // Pass new handlers down to the customer portal
                             onPauseSubscription={handlePauseSubscription}
                             onResumeSubscription={handleResumeSubscription}
                             onCancelSubscription={handleCancelSubscription}
