@@ -4,9 +4,7 @@ node_modules
 client/node_modules/
 client/.cache/
 
-# Ignore Node.js dependencies and environment variables
-node_modules
-.env
+
 
 # IDE-specific
 .vscode/
