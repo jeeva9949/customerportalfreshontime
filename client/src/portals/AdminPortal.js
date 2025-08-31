@@ -19,9 +19,13 @@ const StatusPill = ({ status }) => {
         Cancelled: 'bg-red-100 text-red-800', Open: 'bg-blue-100 text-blue-800',
         Approved: 'bg-green-100 text-green-800', Resolved: 'bg-green-100 text-green-800',
         Paid: 'bg-green-100 text-green-800', Unpaid: 'bg-red-100 text-red-800',
-        Due: 'bg-yellow-100 text-yellow-800'
+        Due: 'bg-yellow-100 text-yellow-800',
+        active: 'bg-green-100 text-green-800',
+        paused: 'bg-yellow-100 text-yellow-800',
+        cancelled: 'bg-red-100 text-red-800',
+        expired: 'bg-gray-100 text-gray-800',
     };
-    return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
+    return <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status || 'N/A'}</span>;
 };
 
 const TabButton = ({ label, isActive, onClick }) => (
@@ -134,11 +138,13 @@ export default function AdminPortal({
     allPasswordRequests: passwordRequests = [],
     allProducts: products = [], 
     allCategories: categories = [], 
-    allOrders: orders = [], 
+    allOrders = [], 
     allSubscriptionPlans: subscriptionPlans = [],
+    allSubscriptions = [],
     onCreate, 
     onUpdate, 
     onDelete,
+    onAdminSubscriptionAction,
     ModalComponent
 }) {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -169,16 +175,13 @@ export default function AdminPortal({
     };
 
     useEffect(() => {
-        if (selectedCustomer) {
-            setIsLoadingSub(true);
-            setTimeout(() => {
-                setCustomerSubscription(null); 
-                setIsLoadingSub(false);
-            }, 500);
+        if (selectedCustomer && allSubscriptions.length > 0) {
+            const sub = allSubscriptions.find(s => s.customerId === selectedCustomer.id);
+            setCustomerSubscription(sub || null);
         } else {
             setCustomerSubscription(null);
         }
-    }, [selectedCustomer]);
+    }, [selectedCustomer, allSubscriptions]);
   
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -194,7 +197,7 @@ export default function AdminPortal({
             'addPayment': 'payments', 'editPayment': 'payments',
             'addProduct': 'products', 'editProduct': 'products',
             'addCategory': 'products/categories',
-            'addSubscriptionPlan': 'subscriptionPlan', 'editSubscriptionPlan': 'subscriptionPlan'
+            'addSubscriptionPlan': 'subscriptions/plans', 'editSubscriptionPlan': 'subscriptions/plans'
         };
         const resource = resourceMap[modalType];
         
@@ -206,6 +209,10 @@ export default function AdminPortal({
         setIsModalOpen(false);
     };
     
+    const handleApprovePassword = (requestId) => {
+        onUpdate('password-requests', `${requestId}/approve`, {});
+    };
+
     const renderModalContent = () => {
         if (!isModalOpen) return null;
         const inputClass = "p-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-indigo-500";
@@ -245,6 +252,9 @@ export default function AdminPortal({
                                 subscription={customerSubscription}
                                 deliveries={deliveries}
                                 agents={agents}
+                                onPause={() => onAdminSubscriptionAction('pause', customerSubscription.id)}
+                                onResume={() => onAdminSubscriptionAction('resume', customerSubscription.id)}
+                                onCancel={() => onAdminSubscriptionAction('cancel', customerSubscription.id)}
                             />
                         )}
                     </div>
@@ -264,13 +274,57 @@ export default function AdminPortal({
             case 'dashboard':
                 return <DashboardOverview deliveries={deliveries} payments={payments} customers={customers} agents={agents} />;
             case 'customers':
-                return <CustomerManagement customers={customers.filter(c => (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase())) || (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase())) || (c.mobile && c.mobile.toLowerCase().includes(searchTerm.toLowerCase())))} deliveries={deliveries} payments={payments} onSelectCustomer={handleSelectCustomer} onUpdateCustomer={(c) => openModal('editCustomer', c)} onDeleteCustomer={(id) => onDelete('customers', id)} onAddCustomer={() => openModal('addCustomer')} />;
+                return <CustomerManagement customers={customers} deliveries={deliveries} payments={payments} onSelectCustomer={handleSelectCustomer} onUpdateCustomer={(c) => openModal('editCustomer', c)} onDeleteCustomer={(id) => onDelete('customers', id)} onAddCustomer={() => openModal('addCustomer')} />;
             case 'live_map':
                 return (<div className="h-[70vh] bg-white shadow-lg rounded-xl overflow-hidden"><LiveAgentTrackerPage /></div>);
             case 'products': 
                 return ( <div className="bg-white shadow-lg rounded-xl p-6"> <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"> <SearchBar onSearch={setSearchTerm} placeholder="Search products..." /> <div className="flex gap-2 w-full md:w-auto"> <button onClick={() => openModal('addProduct')} className="flex-1 md:flex-none bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">+ Add Product</button> <button onClick={() => openModal('addCategory')} className="flex-1 md:flex-none bg-purple-500 text-white py-2 px-4 rounded-lg hover:bg-purple-600">+ Add Category</button> </div> </div> <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (<tr key={p.id}><td className="px-6 py-4 whitespace-nowrap">{p.name}</td><td className="px-6 py-4 whitespace-nowrap">{p.Category?.name}</td><td className="px-6 py-4 whitespace-nowrap">₹{p.price}</td><td className="px-6 py-4 whitespace-nowrap">{p.stock}</td><td className="px-6 py-4 whitespace-nowrap"><button onClick={() => openModal('editProduct', p)} className="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button><button onClick={() => onDelete('products', p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table></div> </div> );
+            
             case 'subscriptions': 
-                return ( <div className="bg-white shadow-lg rounded-xl p-6"> <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"> <SearchBar onSearch={setSearchTerm} placeholder="Search plans..." /> <button onClick={() => openModal('addSubscriptionPlan')} className="bg-teal-500 text-white py-2 px-4 rounded-lg hover:bg-teal-600">+ Add Plan</button> </div> <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{subscriptionPlans.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (<tr key={p.id}><td className="px-6 py-4 whitespace-nowrap">{p.name}</td><td className="px-6 py-4 whitespace-nowrap">₹{p.price}</td><td className="px-6 py-4 whitespace-nowrap">{p.duration}</td><td className="px-6 py-4 whitespace-nowrap"><button onClick={() => openModal('editSubscriptionPlan', p)} className="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button><button onClick={() => onDelete('subscriptionPlan', p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table></div> </div> );
+                return ( 
+                    <div className="space-y-8">
+                        <div className="bg-white shadow-lg rounded-xl p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                                <h2 className="text-xl font-bold text-gray-800">Subscription Plans</h2>
+                                <button onClick={() => openModal('addSubscriptionPlan')} className="bg-teal-500 text-white py-2 px-4 rounded-lg hover:bg-teal-600 w-full md:w-auto">+ Add Plan</button>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {subscriptionPlans.map(p => (<tr key={p.id}><td className="px-6 py-4 whitespace-nowrap">{p.name}</td><td className="px-6 py-4 whitespace-nowrap">₹{p.price}</td><td className="px-6 py-4 whitespace-nowrap">{p.duration}</td><td className="px-6 py-4 whitespace-nowrap"><button onClick={() => openModal('editSubscriptionPlan', p)} className="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button><button onClick={() => onDelete('subscriptions/plans', p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="bg-white shadow-lg rounded-xl p-6">
+                             <h2 className="text-xl font-bold text-gray-800 mb-4">Customer Subscriptions</h2>
+                             <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next Delivery</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paused Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resumed Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned Agent</th></tr></thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {allSubscriptions.map(s => {
+                                            const nextDelivery = deliveries.find(d => d.customer_id === s.customerId && new Date(d.delivery_date) >= new Date());
+                                            const agent = nextDelivery ? agents.find(a => a.id === nextDelivery.agent_id) : null;
+                                            return (
+                                                <tr key={s.id}>
+                                                    <td className="px-6 py-4 whitespace-nowrap">{s.Customer?.name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">{s.SubscriptionPlan?.name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap"><StatusPill status={s.status} /></td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">{s.nextDeliveryDate ? format(new Date(s.nextDeliveryDate), 'MMM dd, yyyy') : 'N/A'}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">{s.pausedAt ? format(new Date(s.pausedAt), 'MMM dd, yyyy') : 'N/A'}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">{s.resumedAt ? format(new Date(s.resumedAt), 'MMM dd, yyyy') : 'N/A'}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">{agent ? agent.name : 'Unassigned'}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                );
             case 'deliveries': 
                 return ( <div className="bg-white shadow-lg rounded-xl p-6"> <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"> <SearchBar onSearch={setSearchTerm} placeholder="Search deliveries..." /> <button onClick={() => openModal('createDelivery')} className="bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600">+ Create Delivery</button> </div> <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{deliveries.filter(d => (d.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map(d => (<tr key={d.id}><td className="px-6 py-4 whitespace-nowrap">{d.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap">{d.agent?.name || 'Unassigned'}</td><td className="px-6 py-4 whitespace-nowrap">{format(new Date(d.delivery_date), 'MMM dd, yyyy')}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={d.status} /></td><td className="px-6 py-4 whitespace-nowrap"><button onClick={() => openModal('editDelivery', d)} className="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button><button onClick={() => onDelete('deliveries', d.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table></div> </div> );
             case 'agents': 
@@ -279,6 +333,10 @@ export default function AdminPortal({
                 return ( <div className="bg-white shadow-lg rounded-xl p-6"> <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"> <SearchBar onSearch={setSearchTerm} placeholder="Search payments..." /> <button onClick={() => openModal('addPayment')} className="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700">+ Add Payment</button> </div> <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{payments.filter(p => (p.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map(p => (<tr key={p.id}><td className="px-6 py-4 whitespace-nowrap">{p.customer?.name}</td><td className="px-6 py-4 whitespace-nowrap">₹{p.amount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={p.status} /></td><td className="px-6 py-4 whitespace-nowrap">{format(new Date(p.due_date), 'MMM dd, yyyy')}</td><td className="px-6 py-4 whitespace-nowrap"><button onClick={() => openModal('editPayment', p)} className="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button><button onClick={() => onDelete('payments', p.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table></div> </div> );
             case 'support': 
                 return ( <div className="bg-white shadow-lg rounded-xl p-6"> <SearchBar onSearch={setSearchTerm} placeholder="Search tickets..." /> <div className="overflow-x-auto mt-4"><table className="min-w-full divide-y divide-gray-200"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{supportTickets.map(t => (<tr key={t.id}><td className="px-6 py-4 whitespace-nowrap">{t.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap">{t.issueType}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={t.status} /></td><td className="px-6 py-4 whitespace-nowrap">{format(new Date(t.createdAt), 'MMM dd, yyyy')}</td><td className="px-6 py-4 whitespace-nowrap">{t.status === 'Open' && <button onClick={() => onUpdate('support', t.id, { status: 'Resolved' })} className="text-green-600 hover:text-green-900">Resolve</button>}</td></tr>))}</tbody></table></div> </div> );
+            case 'orders':
+                return ( <div className="bg-white shadow-lg rounded-xl p-6"> <SearchBar onSearch={setSearchTerm} placeholder="Search by customer name or order ID..." /> <div className="overflow-x-auto mt-4"><table className="min-w-full divide-y divide-gray-200"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{allOrders.filter(o => (o.Customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || o.id.toString().includes(searchTerm)).map(o => (<tr key={o.id}><td className="px-6 py-4 whitespace-nowrap">#{o.id}</td><td className="px-6 py-4 whitespace-nowrap">{o.Customer?.name}</td><td className="px-6 py-4 whitespace-nowrap">₹{o.totalAmount}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={o.status} /></td><td className="px-6 py-4 whitespace-nowrap">{format(new Date(o.createdAt), 'MMM dd, yyyy')}</td></tr>))}</tbody></table></div> </div> );
+            case 'password_requests':
+                return ( <div className="bg-white shadow-lg rounded-xl p-6"> <SearchBar onSearch={setSearchTerm} placeholder="Search by agent name..." /> <div className="overflow-x-auto mt-4"><table className="min-w-full divide-y divide-gray-200"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{passwordRequests.filter(pr => (pr.agent?.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map(pr => (<tr key={pr.id}><td className="px-6 py-4 whitespace-nowrap">{pr.agent?.name}</td><td className="px-6 py-4 whitespace-nowrap"><StatusPill status={pr.status} /></td><td className="px-6 py-4 whitespace-nowrap">{format(new Date(pr.createdAt), 'MMM dd, yyyy')}</td><td className="px-6 py-4 whitespace-nowrap">{pr.status === 'Pending' && <button onClick={() => handleApprovePassword(pr.id)} className="text-green-600 hover:text-green-900">Approve</button>}</td></tr>))}</tbody></table></div> </div> );
             case 'reports': 
                 return <ReportsAndExport deliveries={deliveries} payments={payments} agents={agents} />;
             default: return null;
@@ -290,13 +348,13 @@ export default function AdminPortal({
         {isSidebarOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>}
 
         <nav className={`w-64 bg-gray-800 text-white flex flex-col fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-40`}>
-            {/* NEW: Added Logo */}
             <div className="p-4 border-b border-gray-700 flex items-center gap-3">
                 <img src="https://res.cloudinary.com/dhvi0ftfi/image/upload/v1755159695/freshontimelogo_iswxmn.jpg" alt="Logo" className="h-10 w-auto rounded-full"/>
                 <h1 className="text-xl font-bold">FreshOnTime</h1>
             </div>
             <div className="flex-1 overflow-y-auto">
                 <TabButton label="Dashboard" isActive={activeTab === 'dashboard'} onClick={() => {setActiveTab('dashboard'); setIsSidebarOpen(false);}} />
+                <TabButton label="Orders" isActive={activeTab === 'orders'} onClick={() => {setActiveTab('orders'); setIsSidebarOpen(false);}} />
                 <TabButton label="Products" isActive={activeTab === 'products'} onClick={() => {setActiveTab('products'); setIsSidebarOpen(false);}} />
                 <TabButton label="Subscriptions" isActive={activeTab === 'subscriptions'} onClick={() => {setActiveTab('subscriptions'); setIsSidebarOpen(false);}} />
                 <TabButton label="Deliveries" isActive={activeTab === 'deliveries'} onClick={() => {setActiveTab('deliveries'); setIsSidebarOpen(false);}} />
@@ -305,6 +363,7 @@ export default function AdminPortal({
                 <TabButton label="Payments" isActive={activeTab === 'payments'} onClick={() => {setActiveTab('payments'); setIsSidebarOpen(false);}} />
                 <TabButton label="Live Map" isActive={activeTab === 'live_map'} onClick={() => {setActiveTab('live_map'); setIsSidebarOpen(false);}} />
                 <TabButton label="Support" isActive={activeTab === 'support'} onClick={() => {setActiveTab('support'); setIsSidebarOpen(false);}} />
+                <TabButton label="Password Requests" isActive={activeTab === 'password_requests'} onClick={() => {setActiveTab('password_requests'); setIsSidebarOpen(false);}} />
                 <TabButton label="Reports" isActive={activeTab === 'reports'} onClick={() => {setActiveTab('reports'); setIsSidebarOpen(false);}} />
             </div>
         </nav>
@@ -314,7 +373,6 @@ export default function AdminPortal({
                     <button className="md:hidden text-gray-500" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
-                    {/* NEW: Dynamic Section Title */}
                     <h2 className="text-xl font-semibold text-gray-800">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace('_', ' ')}</h2>
                 </div>
                 <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Logout</button>

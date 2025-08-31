@@ -9,7 +9,9 @@ router.use(protect);
 // POST /api/orders - Create a new order from the cart
 router.post('/', orderController.createOrder);
 
-// GET /api/orders - Get all orders for the logged-in customer
-router.get('/', orderController.getCustomerOrders);
+// --- THIS IS THE FIX ---
+// GET /api/orders - This now points to the generic `getOrders` function
+// which correctly returns ALL orders for an admin.
+router.get('/', orderController.getOrders);
 
 module.exports = router;

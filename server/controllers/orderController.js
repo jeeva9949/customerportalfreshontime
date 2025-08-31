@@ -1,12 +1,12 @@
-const { Order, OrderItem, Product, sequelize } = require('../models');
+const { Order, OrderItem, Product, Customer, sequelize } = require('../models'); // IMPORTANT: Added Customer model
 const { getIO } = require('../socket');
 
 // Create a new order (checkout)
 exports.createOrder = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        const { cartItems } = req.body; // Expects an array of { productId, quantity }
-        const customerId = req.user.id; // From 'protect' middleware
+        const { cartItems } = req.body;
+        const customerId = req.user.id;
 
         if (!cartItems || cartItems.length === 0) {
             return res.status(400).json({ message: 'Cart is empty' });
@@ -31,6 +31,7 @@ exports.createOrder = async (req, res) => {
         const newOrder = await Order.create({
             customerId,
             totalAmount,
+            status: 'Pending' // Explicitly set status
         }, { transaction });
 
         for (const itemData of orderItemsData) {
@@ -39,7 +40,6 @@ exports.createOrder = async (req, res) => {
                 orderId: newOrder.id
             }, { transaction });
 
-            // Decrement stock
             await Product.decrement('stock', {
                 by: itemData.quantity,
                 where: { id: itemData.productId },
@@ -58,18 +58,33 @@ exports.createOrder = async (req, res) => {
     }
 };
 
-// Get orders for the logged-in customer
-exports.getCustomerOrders = async (req, res) => {
+
+// --- THIS IS THE CORRECTED FUNCTION ---
+// It now fetches all orders for an Admin, and specific orders for a Customer.
+exports.getOrders = async (req, res) => {
     try {
-        const customerId = req.user.id;
-        const orders = await Order.findAll({
-            where: { customerId },
-            include: [{
-                model: OrderItem,
-                include: [Product]
-            }],
+        const { id, role } = req.user;
+        let queryOptions = {
+            include: [
+                {
+                    model: OrderItem,
+                    include: [Product]
+                },
+                {
+                    model: Customer, // Include customer details with the order
+                    attributes: ['name'] // Only fetch the customer's name
+                }
+            ],
             order: [['createdAt', 'DESC']]
-        });
+        };
+
+        // If the user is a customer, only show their orders.
+        if (role === 'Customer') {
+            queryOptions.where = { customerId: id };
+        }
+        // If the user is an Admin, the 'where' clause is omitted, fetching all orders.
+
+        const orders = await Order.findAll(queryOptions);
         res.status(200).json(orders);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching orders', error: error.message });

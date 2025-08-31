@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import io from 'socket.io-client';
-import axios from 'axios'; // Using axios for more robust API requests
+import axios from 'axios'; 
 
 // --- Import Portal Components ---
 import AdminPortal from './portals/AdminPortal';
@@ -16,7 +16,7 @@ import CustomerPortal from './components/CustomerDashboard';
 const API_URL = 'http://localhost:5000/api';
 const SOCKET_URL = 'http://localhost:5000';
 
-// --- Reusable UI Components (from your existing code) ---
+// --- Reusable UI Components ---
 const Modal = ({ title, children, onClose }) => {
     return ReactDOM.createPortal(
         <>
@@ -27,7 +27,9 @@ const Modal = ({ title, children, onClose }) => {
                         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl p-1 rounded-full hover:bg-gray-100">&times;</button>
                     </div>
-                    <div className="p-6">{children}</div>
+                    <div className="p-6">
+                        {children}
+                    </div>
                 </div>
             </div>
         </>,
@@ -43,224 +45,257 @@ const ConfirmModal = ({ title, message, onConfirm, onCancel }) => (
 );
 
 
-// --- Main App Component (Root) ---
+// --- Main App Component ---
 export default function App() {
-    // --- STATE MANAGEMENT (from your existing code) ---
     const [view, setView] = useState('landing_page');
     const [loggedInUser, setLoggedInUser] = useState(null);
+    const [token, setToken] = useState(localStorage.getItem('token'));
     const [initialAuthType, setInitialAuthType] = useState('customer');
     
-    // --- DATA STATES (from your existing code) ---
-    const [customers, setCustomers] = useState([]);
-    const [agents, setAgents] = useState([]);
-    const [deliveries, setDeliveries] = useState([]);
-    const [payments, setPayments] = useState([]);
-    const [supportTickets, setSupportTickets] = useState([]);
-    const [passwordRequests, setPasswordRequests] = useState([]);
-    const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [subscriptionPlans, setSubscriptionPlans] = useState([]);
-    const [orders, setOrders] = useState([]);
-    const [activeSubscriptions, setActiveSubscriptions] = useState([]);
+    // --- Centralized Data State ---
+    const [allCustomers, setAllCustomers] = useState([]);
+    const [allAgents, setAllAgents] = useState([]);
+    const [allDeliveries, setAllDeliveries] = useState([]);
+    const [allPayments, setAllPayments] = useState([]);
+    const [allSupportTickets, setAllSupportTickets] = useState([]);
+    const [allPasswordRequests, setAllPasswordRequests] = useState([]);
+    const [allProducts, setAllProducts] = useState([]);
+    const [allCategories, setAllCategories] = useState([]);
+    const [allSubscriptionPlans, setAllSubscriptionPlans] = useState([]);
+    const [allOrders, setAllOrders] = useState([]);
+    const [allSubscriptions, setAllSubscriptions] = useState([]);
+    
+    // Customer-specific state
+    const [myActiveSubscriptions, setMyActiveSubscriptions] = useState([]);
+    const [myOrders, setMyOrders] = useState([]);
+
     const [confirmState, setConfirmState] = useState({ isOpen: false });
 
-    // --- API & AUTH HELPERS ---
-    const getAuthHeaders = () => {
-        const token = localStorage.getItem('token');
-        return token ? { Authorization: `Bearer ${token}` } : {};
-    };
+    // --- Helper for API calls ---
+    const getAuthHeaders = useCallback(() => ({
+        'Authorization': `Bearer ${token}`
+    }), [token]);
 
     const handleLogout = useCallback(() => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        setToken(null);
         setLoggedInUser(null);
         setView('landing_page');
     }, []);
   
-    // --- ENHANCED DATA FETCHING ---
-    const fetchData = useCallback(async (endpoint, setter) => {
-        try {
-            const response = await axios.get(`${API_URL}/${endpoint}`, { headers: getAuthHeaders() });
-            setter(response.data);
-        } catch (error) {
-            console.error(`Error fetching ${endpoint}:`, error);
-            if (error.response && error.response.status === 401) {
-                handleLogout();
-            }
-        }
-    }, [handleLogout]);
-
-    // Fetch initial data when the logged-in user changes
-    useEffect(() => {
-        const fetchAllData = () => {
-            fetchData('products', setProducts);
-            fetchData('products/categories', setCategories);
-            fetchData('subscriptions/plans', setSubscriptionPlans);
-
-            if (loggedInUser) {
-                if (loggedInUser.role === 'Admin') {
-                    fetchData('customers', setCustomers);
-                    fetchData('agents', setAgents);
-                    fetchData('deliveries', setDeliveries);
-                    fetchData('payments', setPayments);
-                    fetchData('support', setSupportTickets);
-                    fetchData('password-requests', setPasswordRequests);
-                    fetchData('orders', setOrders); // Also fetch orders for admin view
-                } else if (loggedInUser.role === 'Customer') {
-                    fetchData('orders', setOrders);
-                    fetchData('subscriptions/my-subscriptions', setActiveSubscriptions);
-                }
+    // --- Unified Data Fetching Function ---
+    const fetchData = useCallback(async () => {
+        if (!token || !loggedInUser) return;
+        
+        const fetchResource = async (endpoint, setter) => {
+            try {
+                const res = await axios.get(`${API_URL}/${endpoint}`, { headers: getAuthHeaders() });
+                setter(res.data);
+            } catch (error) {
+                console.error(`Failed to fetch ${endpoint}:`, error);
+                if (error.response?.status === 401) handleLogout();
             }
         };
-        fetchAllData();
+
+        // Fetch public data on every load
+        fetchResource('products', setAllProducts);
+        fetchResource('products/categories', setAllCategories);
+        fetchResource('subscriptions/plans', setAllSubscriptionPlans);
+
+        // Fetch role-specific data
+        const { role } = loggedInUser;
+        if (role === 'Admin') {
+            await Promise.all([
+                fetchResource('customers', setAllCustomers),
+                fetchResource('agents', setAllAgents),
+                fetchResource('deliveries', setAllDeliveries),
+                fetchResource('payments', setAllPayments),
+                fetchResource('support', setAllSupportTickets),
+                fetchResource('password-requests', setAllPasswordRequests),
+                fetchResource('orders/all', setAllOrders), // Correct admin route for all orders
+                fetchResource('subscriptions/all', setAllSubscriptions),
+            ]);
+        } else if (role === 'Customer') {
+             await Promise.all([
+                fetchResource('orders', setMyOrders),
+                fetchResource('subscriptions/my-subscriptions', setMyActiveSubscriptions)
+            ]);
+        } else if (role === 'Agent') {
+            fetchResource('deliveries', setAllDeliveries); // Agents need all deliveries to find theirs
+        }
+
+    }, [token, loggedInUser, getAuthHeaders, handleLogout]);
+
+    // --- Authentication and Initial Load ---
+    useEffect(() => {
+        const userFromStorage = localStorage.getItem('user');
+        if (token && userFromStorage) {
+            try {
+                const parsedUser = JSON.parse(userFromStorage);
+                setLoggedInUser(parsedUser);
+                if (parsedUser.role === 'Admin') setView('admin_portal');
+                else if (parsedUser.role === 'Agent') setView('agent_portal');
+                else setView('customer_portal');
+            } catch (e) { handleLogout(); }
+        } else {
+            setView('landing_page');
+        }
+    }, [token, handleLogout]);
+
+    useEffect(() => {
+        if (loggedInUser) {
+            fetchData();
+        }
     }, [loggedInUser, fetchData]);
 
-    // --- REAL-TIME DATA SYNCHRONIZATION (ENHANCED) ---
+    // --- Real-Time Updates via Socket.IO ---
     useEffect(() => {
-        const token = localStorage.getItem('token');
         if (!token) return;
-
         const socket = io(SOCKET_URL);
-        const eventMap = {
-            'deliveries_updated': () => fetchData('deliveries', setDeliveries),
-            'support_tickets_updated': () => fetchData('support', setSupportTickets),
-            'password_requests_updated': () => fetchData('password-requests', setPasswordRequests),
-            'customers_updated': () => fetchData('customers', setCustomers),
-            'agents_updated': () => fetchData('agents', setAgents),
-            'payments_updated': () => fetchData('payments', setPayments),
-            'products_updated': () => fetchData('products', setProducts),
-            'categories_updated': () => fetchData('products/categories', setCategories),
-            'orders_updated': () => fetchData('orders', setOrders),
-            'subscription_plans_updated': () => fetchData('subscriptions/plans', setSubscriptionPlans),
-            'subscriptions_updated': () => fetchData('subscriptions/my-subscriptions', setActiveSubscriptions),
-        };
-
-        Object.keys(eventMap).forEach(event => socket.on(event, eventMap[event]));
-
+        socket.on('connect', () => console.log('WebSocket Connected'));
+        
+        // When any data changes, just refetch everything.
+        const handleUpdate = () => fetchData();
+        
+        const events = [
+            'deliveries_updated', 'support_tickets_updated', 'password_requests_updated',
+            'customers_updated', 'agents_updated', 'payments_updated', 'products_updated',
+            'categories_updated', 'orders_updated', 'subscription_plans_updated', 'subscriptions_updated'
+        ];
+        
+        events.forEach(event => socket.on(event, handleUpdate));
+        
         return () => {
-            Object.keys(eventMap).forEach(event => socket.off(event));
+            events.forEach(event => socket.off(event, handleUpdate));
             socket.disconnect();
         };
-    }, [fetchData]);
+    }, [token, fetchData]);
 
-    // --- GENERIC CRUD HANDLERS ---
-    const createResource = async (resource, data) => {
+    // --- Authentication Handlers ---
+    const handleLogin = async (email, password, userType) => {
+        const endpoint = userType === 'admin' ? '/auth/login' : '/agents/login';
         try {
-            await axios.post(`${API_URL}/${resource}`, data, { headers: getAuthHeaders() });
+            const res = await axios.post(`${API_URL}${endpoint}`, { email, password });
+            const { token: newToken, user } = res.data;
+            localStorage.setItem('token', newToken);
+            localStorage.setItem('user', JSON.stringify(user));
+            setToken(newToken);
         } catch (error) {
-            console.error(`Error creating ${resource}:`, error);
-            alert(`Error: ${error.response?.data?.message || 'Could not create item.'}`);
+            alert(error.response?.data?.message || 'Login failed');
         }
     };
-
-    const updateResource = async (resource, id, data) => {
+    
+    const handleCustomerAuth = async (authData, isLogin) => {
+        const endpoint = isLogin ? '/customer-auth/login' : '/customer-auth/register';
         try {
-            await axios.put(`${API_URL}/${resource}/${id}`, data, { headers: getAuthHeaders() });
-        } catch (error) {
-            console.error(`Error updating ${resource}:`, error);
-            alert(`Error: ${error.response?.data?.message || 'Could not update item.'}`);
-        }
-    };
-
-    const deleteResource = (resource, id) => {
-        setConfirmState({
-            isOpen: true,
-            title: `Delete ${resource}?`,
-            message: 'Are you sure? This action cannot be undone.',
-            onConfirm: async () => {
-                try {
-                    await axios.delete(`${API_URL}/${resource}/${id}`, { headers: getAuthHeaders() });
-                    setConfirmState({ isOpen: false });
-                } catch (error) {
-                    console.error(`Error deleting ${resource}:`, error);
-                    alert(`Error: ${error.response?.data?.message || 'Could not delete item.'}`);
-                    setConfirmState({ isOpen: false });
-                }
+            const res = await axios.post(`${API_URL}${endpoint}`, authData);
+            if (isLogin) {
+                const { token: newToken, user } = res.data;
+                localStorage.setItem('token', newToken);
+                localStorage.setItem('user', JSON.stringify(user));
+                setToken(newToken);
+            } else {
+                alert('Sign up successful! Please log in.');
             }
-        });
-    };
-
-    // --- AUTHENTICATION LOGIC (from your existing code) ---
-    const handleLogin = (user, token) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        setLoggedInUser(user);
-        switch (user.role) {
-            case 'Admin': setView('admin_portal'); break;
-            case 'Agent': setView('agent_portal'); break;
-            case 'Customer': setView('customer_portal'); break;
-            default: setView('landing_page');
+        } catch (error) {
+             alert(error.response?.data?.message || 'Authentication failed');
         }
     };
 
-    // Check for existing token on app load
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        const user = localStorage.getItem('user');
-        if (token && user) {
-            try {
-                handleLogin(JSON.parse(user), token);
-            } catch (e) { handleLogout(); }
+    // --- Generic CRUD Handlers ---
+    const handleCreate = async (resource, data) => {
+        try { await axios.post(`${API_URL}/${resource}`, data, { headers: getAuthHeaders() }); } 
+        catch (e) { alert(e.response?.data?.message || 'Failed to create item.'); }
+    };
+    const handleUpdate = async (resource, id, data) => {
+        try { await axios.put(`${API_URL}/${resource}/${id}`, data, { headers: getAuthHeaders() }); }
+        catch (e) { alert(e.response?.data?.message || 'Failed to update item.'); }
+    };
+    const handleDelete = async (resource, id) => {
+        if (window.confirm('Are you sure you want to delete this item?')) {
+            try { await axios.delete(`${API_URL}/${resource}/${id}`, { headers: getAuthHeaders() }); }
+            catch (e) { alert(e.response?.data?.message || 'Failed to delete item.'); }
         }
-    }, [handleLogout]);
-
-    const handlePortalLinkClick = (userType) => {
-        setInitialAuthType(userType);
-        setView('auth');
+    };
+    
+    // --- Subscription Handlers (FIXED) ---
+    const handleSubscriptionAction = async (action, subscriptionId) => {
+        try {
+            await axios.put(`${API_URL}/subscriptions/${subscriptionId}/${action}`, {}, { headers: getAuthHeaders() });
+            // Real-time listener will handle the data refresh
+        } catch (error) {
+            alert(error.response?.data?.message || `Failed to ${action} subscription.`);
+        }
     };
 
-    // --- VIEW RENDERING ---
+    const handlePauseSubscription = (id) => handleSubscriptionAction('pause', id);
+    const handleResumeSubscription = (id) => handleSubscriptionAction('resume', id);
+    const handleCancelSubscription = (id) => handleSubscriptionAction('cancel', id);
+    
+    // Admin override for subscriptions
+    const handleAdminSubscriptionAction = async (action, subscriptionId) => {
+         try {
+            await axios.put(`${API_URL}/admin/subscriptions/${subscriptionId}/${action}`, {}, { headers: getAuthHeaders() });
+        } catch (error) {
+            alert(error.response?.data?.message || `Failed to perform admin action: ${action}.`);
+        }
+    };
+
+    // --- Other Handlers ---
+    const handleCreateOrder = (orderData) => handleCreate('orders', orderData);
+    const handleSubscribe = (planId) => handleCreate('subscriptions/subscribe', { planId });
+
     const renderView = () => {
         switch (view) {
             case 'admin_portal':
                 return <AdminPortal 
                             onLogout={handleLogout} 
-                            allCustomers={customers} 
-                            allAgents={agents} 
-                            allDeliveries={deliveries} 
-                            allPayments={payments} 
-                            allSupportTickets={supportTickets} 
-                            allPasswordRequests={passwordRequests} 
-                            allProducts={products} 
-                            allCategories={categories} 
-                            allOrders={orders} 
-                            allSubscriptionPlans={subscriptionPlans}
-                            onCreate={createResource}
-                            onUpdate={updateResource}
-                            onDelete={deleteResource}
+                            allCustomers={allCustomers} allAgents={allAgents} allDeliveries={allDeliveries} 
+                            allPayments={allPayments} allSupportTickets={allSupportTickets} 
+                            allPasswordRequests={allPasswordRequests} allProducts={allProducts} 
+                            allCategories={allCategories} allOrders={allOrders} 
+                            allSubscriptionPlans={allSubscriptionPlans} allSubscriptions={allSubscriptions}
+                            onCreate={handleCreate} onUpdate={handleUpdate} onDelete={handleDelete}
+                            onAdminSubscriptionAction={handleAdminSubscriptionAction}
                             ModalComponent={Modal}
                         />;
             case 'agent_portal':
                 return <AgentPortal 
                             agent={loggedInUser} 
-                            allDeliveries={deliveries} 
-                            allCustomers={customers} 
+                            allDeliveries={allDeliveries}
                             onLogout={handleLogout} 
-                            onUpdateDelivery={(delivery) => updateResource('deliveries', delivery.id, delivery)}
+                            onUpdateDelivery={(id, data) => handleUpdate('deliveries', id, data)}
                             ModalComponent={Modal}
                         />;
             case 'auth':
-                return <AuthPage onLogin={handleLogin} onBack={() => setView('landing_page')} initialUserType={initialAuthType} />;
+                return <AuthPage onAdminAgentLogin={handleLogin} onCustomerAuth={handleCustomerAuth} onBack={() => setView('landing_page')} initialUserType={initialAuthType} />;
             case 'customer_portal':
                 return <CustomerPortal 
                             user={loggedInUser} 
                             onLogout={handleLogout}
-                            products={products}
-                            categories={categories}
-                            subscriptionPlans={subscriptionPlans}
-                            activeSubscriptions={activeSubscriptions}
-                            orders={orders}
+                            onCreateOrder={handleCreateOrder}
+                            onSubscribe={handleSubscribe}
+                            products={allProducts}
+                            categories={allCategories}
+                            subscriptionPlans={allSubscriptionPlans}
+                            activeSubscriptions={myActiveSubscriptions}
+                            orders={myOrders}
+                            onPauseSubscription={handlePauseSubscription}
+                            onResumeSubscription={handleResumeSubscription}
+                            onCancelSubscription={handleCancelSubscription}
                         />;
             case 'landing_page':
             default:
-                return <LandingPage onAuthClick={() => { setInitialAuthType('customer'); setView('auth'); }} onPortalLinkClick={handlePortalLinkClick} />;
+                return <LandingPage onAuthClick={() => setView('auth')} onPortalLinkClick={(type) => {setInitialAuthType(type); setView('auth');}} />;
         }
     }
 
     return (
         <>
-            {confirmState.isOpen && <ConfirmModal {...confirmState} onCancel={() => setConfirmState({ isOpen: false })} />}
+            {confirmState.isOpen && <ConfirmModal {...confirmState} onConfirm={() => confirmState.onConfirm()} onCancel={() => setConfirmState({isOpen: false})} />}
             {renderView()}
         </>
     );
 }
+
