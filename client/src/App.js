@@ -113,7 +113,7 @@ export default function App() {
                 fetchResource('payments', setAllPayments),
                 fetchResource('support', setAllSupportTickets),
                 fetchResource('password-requests', setAllPasswordRequests),
-                fetchResource('orders/all', setAllOrders), // Correct admin route for all orders
+                fetchResource('orders', setAllOrders), // Correct admin route for all orders
                 fetchResource('subscriptions/all', setAllSubscriptions),
             ]);
         } else if (role === 'Customer') {

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import SubscriptionPage from './SubscriptionPage'; // Import the dedicated SubscriptionPage component
+import SubscriptionPage from './SubscriptionPage';
+import CartPage from './CartPage';
+import CheckoutPage from './CheckoutPage'; 
+import OrderDetailsModal from './OrderDetailsModal'; // Import the new modal
 
-// --- Helper Components ---
+// --- Helper Components (No Changes) ---
 
 const AnimatedPage = ({ children, className = '' }) => (
     <div className={`animate-fade-in ${className}`}>{children}</div>
@@ -31,7 +34,6 @@ const CategoryIcon = ({ category, isActive, onClick }) => (
     </button>
 );
 
-// --- New Subscription Checkout Modal ---
 const SubscriptionCheckoutModal = ({ plan, user, onConfirm, onClose }) => {
     const [address, setAddress] = useState(user?.address || '');
     const [paymentMethod, setPaymentMethod] = useState('UPI');
@@ -126,10 +128,7 @@ const SubscriptionCheckoutModal = ({ plan, user, onConfirm, onClose }) => {
         </div>
     );
 };
-
-
 // --- Page Components ---
-
 const DashboardHomePage = ({ user, products, categories, onAddToCart }) => {
     const [activeCategory, setActiveCategory] = useState('All Items');
     
@@ -220,60 +219,23 @@ const MenuPage = ({ products, categories, onAddToCart }) => {
 };
 
 
-const CartPage = ({ cart, onUpdateCart, onCheckout }) => {
-    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    return (
-        <AnimatedPage>
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">My Cart</h1>
-            {cart.length === 0 ? (
-                <p className="text-center text-gray-500 py-10">Your cart is empty.</p>
-            ) : (
-                <div className="space-y-4">
-                    {cart.map(item => (
-                        <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm flex items-center gap-4">
-                            <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover rounded-lg"/>
-                            <div className="flex-1">
-                                <p className="font-bold text-gray-800">{item.name}</p>
-                                <p className="text-sm text-gray-500">₹{item.price}</p>
-                            </div>
-                            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                                <button onClick={() => onUpdateCart(item, -1)} className="font-bold w-7 h-7">-</button>
-                                <span>{item.quantity}</span>
-                                <button onClick={() => onUpdateCart(item, 1)} className="font-bold w-7 h-7">+</button>
-                            </div>
-                        </div>
-                    ))}
-                    <div className="mt-6 pt-4 border-t">
-                        <div className="flex justify-between font-bold text-lg">
-                            <span>Total</span>
-                            <span>₹{total.toFixed(2)}</span>
-                        </div>
-                        <button onClick={() => onCheckout(cart)} className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl mt-4 hover:bg-orange-600">Proceed to Checkout</button>
-                    </div>
-                </div>
-            )}
-        </AnimatedPage>
-    );
-};
-
-const OrdersPage = ({ orders }) => (
+const OrdersPage = ({ orders, onSelectOrder }) => ( // Add onSelectOrder prop
     <AnimatedPage>
         <h1 className="text-2xl font-bold text-gray-800 mb-4">Order History</h1>
         <div className="space-y-4">
             {orders && orders.length > 0 ? orders.map(order => (
-                 <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm">
+                 <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => onSelectOrder(order)}>
                      <div className="flex justify-between items-start">
                          <div>
-                            <p className="font-bold">Order #{order.id}</p>
+                            <p className="font-bold text-gray-800">Order #{order.id}</p>
                             <p className="text-sm text-gray-600">{order.OrderItems.map(oi => `${oi.Product.name} (x${oi.quantity})`).join(', ')}</p>
                             <p className="text-xs text-gray-400 mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
                          </div>
                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${order.status === 'Delivered' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{order.status}</span>
                      </div>
                      <div className="flex justify-between items-center mt-4">
-                         <span className="font-bold">₹{order.totalAmount}</span>
-                         <button className="text-sm text-green-600 font-bold">Reorder</button>
+                         <span className="font-bold text-gray-900">₹{order.totalAmount}</span>
+                         <button className="text-sm text-green-600 font-bold hover:underline">Reorder</button>
                      </div>
                  </div>
             )) : <p className="text-center text-gray-500 py-10">You have no past orders.</p>}
@@ -302,17 +264,17 @@ const ProfilePage = ({ user, onNavigate }) => (
 );
 
 // --- Main Customer Portal Component ---
-
 export default function CustomerPortal({ 
     user, onLogout, onCreateOrder, onSubscribe, onUpdateAddress, 
     products, categories, subscriptionPlans, activeSubscriptions, orders,
-    // NEW props from App.js
     onPauseSubscription, onResumeSubscription, onCancelSubscription, onRenewSubscription 
 }) {
     const [activeTab, setActiveTab] = useState('home');
     const [cart, setCart] = useState([]);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [isSubCheckoutOpen, setIsSubCheckoutOpen] = useState(false);
+    const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null); // --- NEW: State for selected order ---
 
     const handleAddToCart = (product) => {
         setCart(prevCart => {
@@ -324,26 +286,24 @@ export default function CustomerPortal({
         });
     };
     
-    const handleUpdateCart = (product, change) => {
-        setCart(prevCart => {
-            const existing = prevCart.find(item => item.id === product.id);
-            if (!existing) return prevCart;
-            
-            const newQuantity = existing.quantity + change;
-            if (newQuantity <= 0) {
-                return prevCart.filter(item => item.id !== product.id);
-            }
-            return prevCart.map(item => item.id === product.id ? { ...item, quantity: newQuantity } : item);
-        });
+    const handleUpdateCartQuantity = (productId, newQuantity) => {
+        setCart(prevCart => prevCart.map(item => item.id === productId ? { ...item, quantity: newQuantity } : item));
     };
 
-    const handleCheckout = (cartItems) => {
+    const handleRemoveFromCart = (productId) => {
+        setCart(prevCart => prevCart.filter(item => item.id !== productId));
+    };
+
+    const handlePlaceOrder = (cartItems, shippingInfo) => {
+        if (!user) {
+            alert("Please log in to place an order.");
+            return;
+        }
         const orderPayload = {
-            cartItems: cartItems.map(item => ({ productId: item.id, quantity: item.quantity }))
+            shippingInfo,
+            cartItems: cartItems.map(item => ({ productId: item.id, quantity: item.quantity, price: item.price }))
         };
         onCreateOrder(orderPayload);
-        setCart([]); // Clear cart after placing order
-        setActiveTab('orders'); // Navigate to orders page
     };
 
     const handleSelectPlan = (plan) => {
@@ -352,24 +312,52 @@ export default function CustomerPortal({
     };
 
     const handleConfirmSubscription = async (address) => {
-        await onUpdateAddress(address);
         await onSubscribe(selectedPlan.id);
         setIsSubCheckoutOpen(false);
         setSelectedPlan(null);
+        setActiveTab('subscriptions');
     };
 
+    const handleGoHome = () => {
+        setCart([]);
+        setIsCheckingOut(false);
+        setActiveTab('home');
+    }
+
     const renderContent = () => {
+        if (isCheckingOut) {
+            return <CheckoutPage 
+                user={user}
+                cartItems={cart}
+                onPlaceOrder={handlePlaceOrder}
+                onBackToCart={() => setIsCheckingOut(false)}
+                onGoHome={handleGoHome}
+            />
+        }
+
         switch (activeTab) {
             case 'home': return <DashboardHomePage user={user} products={products} categories={categories} onAddToCart={handleAddToCart} />;
             case 'menu': return <MenuPage products={products} categories={categories} onAddToCart={handleAddToCart} />;
-            case 'cart': return <CartPage cart={cart} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} />;
-            case 'orders': return <OrdersPage orders={orders} />;
+            case 'cart': return <CartPage 
+                                    cartItems={cart} 
+                                    onUpdateQuantity={handleUpdateCartQuantity} 
+                                    onRemoveItem={handleRemoveFromCart}
+                                    onCheckout={() => {
+                                        if (user) {
+                                            setIsCheckingOut(true)
+                                        } else {
+                                            alert('Please log in to proceed to checkout.');
+                                        }
+                                    }}
+                                    onGoToMenu={() => setActiveTab('menu')}
+                                    onBack={() => setActiveTab('home')}
+                                />;
+            case 'orders': return <OrdersPage orders={orders} onSelectOrder={setSelectedOrder} />;
             case 'subscriptions': 
                 return <SubscriptionPage 
                     subscriptionPlans={subscriptionPlans} 
                     activeSubscriptions={activeSubscriptions} 
                     onSelectPlan={handleSelectPlan} 
-                    // Pass the new handlers down to the SubscriptionPage
                     onPause={onPauseSubscription}
                     onResume={onResumeSubscription}
                     onCancel={onCancelSubscription}
@@ -398,7 +386,7 @@ export default function CustomerPortal({
             <span className="text-xs mt-1">{label}</span>
         </button>
     );
-
+    
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
             {isSubCheckoutOpen && (
@@ -408,6 +396,9 @@ export default function CustomerPortal({
                     onConfirm={handleConfirmSubscription}
                     onClose={() => setIsSubCheckoutOpen(false)}
                 />
+            )}
+            {selectedOrder && (
+                <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
             )}
             <header className="sticky top-0 bg-white/80 backdrop-blur-sm z-20 shadow-sm">
                 <div className="p-4 flex justify-between items-center max-w-6xl mx-auto">
@@ -425,15 +416,15 @@ export default function CustomerPortal({
                     </nav>
 
                     <div className="flex items-center gap-4">
-                        {cartItemCount > 0 && (
-                            <button onClick={() => setActiveTab('cart')} className="relative">
-                                <span className="text-2xl">🛒</span>
+                         <button onClick={() => setActiveTab('cart')} className="relative">
+                            <span className="text-2xl">🛒</span>
+                            {cartItemCount > 0 && (
                                 <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                                     {cartItemCount}
                                 </span>
-                            </button>
-                        )}
-                        <button onClick={onLogout} className="text-sm bg-red-100 text-red-600 font-bold py-2 px-4 rounded-lg hover:bg-red-200">Logout</button>
+                            )}
+                        </button>
+                        <button onClick={onLogout} className="text-sm bg-red-100 text-red-600 font-bold py-3 px-4 rounded-lg hover:bg-red-200">Logout</button>
                     </div>
                 </div>
             </header>
@@ -453,3 +444,4 @@ export default function CustomerPortal({
         </div>
     );
 }
+
